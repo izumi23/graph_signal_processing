@@ -35,14 +35,34 @@ def show_fourier_basis(G):
 #show_fourier_basis(graphs.Logo())
 #show_fourier_basis(graphs.Ring(50))
 
-G = graphs.FullConnected(10)
-G.set_coordinates()
+#G = graphs.FullConnected(10)
+#G.set_coordinates()
+#show_fourier_basis(G)
+
+#show_fourier_basis(graphs.DavidSensorNet())
+
+##Ring avec une arête vers le centre
+N = 50
+W = np.eye(N+1,N+1,-1) + np.eye(N+1,N+1,1)
+W[-2,0],W[0,-2] = 1,1
+W[-2,-1],W[-1,-2] = 0,0
+W[0,-1],W[-1,0] = 1,1
+G = graphs.Graph(W)
+
+A = np.array([[1+np.cos(2*k*np.pi/N), 1+np.sin(2*k*np.pi/N)] for k in range(N)] + [[1,1]])
+
+G.set_coordinates(A)
 show_fourier_basis(G)
 
-show_fourier_basis(graphs.DavidSensorNet())
+##FullConnected avec une arête en moins
+N = 10
+W = np.ones((N+1,N+1)) - np.eye(N+1)
+W[0,1], W[1,0] = 0,0
+print(W)
+G = graphs.Graph(W)
 
-
-
+G.set_coordinates()
+show_fourier_basis(G)
 
 
 
