@@ -13,9 +13,13 @@ def fourier_decomposition(G, s, ax1, ax2):
     G.plot_signal(s, ax=ax1, vertex_size=30, plot_name='')
     G.compute_fourier_basis()
     s_hat = G.gft(s)
+    smoothness = (s @ G.L @ s) / (s @ s)
+    label = 'λ_x = {:.3f}'.format(smoothness)
+    ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
     ax2.plot(G.e, np.abs(s_hat), linestyle='None', marker='.')
     for i in range(G.N):
-        ax2.plot([G.e[i], G.e[i]], [0, np.abs(s_hat[i])], color='b')
+        ax2.plot([G.e[i], G.e[i]], [0, np.abs(s_hat[i])], color='C0')
+    ax2.legend()
 
 def show_fourier_decomposition(G, s, leave_open=False):
     if not leave_open:
