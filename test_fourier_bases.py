@@ -18,7 +18,10 @@ def show_fourier_basis(G):
     gs = plt.GridSpec(3, 2, height_ratios=[4, 4, 1])
 
     for i in range(nb_eig):
-        ax = fig.add_subplot(gs[i])
+        if G.coords.shape[1] == 3 :
+            ax = fig.add_subplot(gs[i], projection='3d')
+        else : 
+            ax = fig.add_subplot(gs[i])
         if i == nb_eig-1:
             i = G.N - 2
         G.plot_signal(G.U[:, i+1], vertex_size=30, ax=ax)
@@ -68,7 +71,18 @@ G = graphs.Graph(W)
 G.set_coordinates()
 show_fourier_basis(G)
 
+## Tore
 
+M,N = 20,20
+W = np.eye(M*N,M*N,-1) + np.eye(M*N,M*N,1) + np.eye(M*N,M*N,M) + np.eye(M*N,M*N,-M) + np.eye(M*N,M*N,M*N-M) + np.eye(M*N,M*N,-M*N+M)
+for k in range(N):
+    W[k*M-1,k*M], W[k*M,k*M-1] = 0,0
+    W[k*M+M-1,k*M],W[k*M, k*M+M-1] = 1,1
+A = np.array([[(1 + np.cos(2*i*np.pi/M)/3)*np.cos(2*k*np.pi/N), (1 + np.cos(2*i*np.pi/M)/3)*np.sin(2*k*np.pi/N), np.sin(2*i*np.pi/M)/3] for i in range(M) for k in range(N)])
+G = graphs.Graph(W)
+
+G.set_coordinates(A)
+show_fourier_basis(G)
 
 
 
