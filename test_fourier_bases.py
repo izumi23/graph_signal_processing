@@ -20,7 +20,7 @@ def show_fourier_basis(G):
     for i in range(nb_eig):
         if G.coords.shape[1] == 3 :
             ax = fig.add_subplot(gs[i], projection='3d')
-        else : 
+        else :
             ax = fig.add_subplot(gs[i])
         if i == nb_eig-1:
             i = G.N - 2
@@ -37,7 +37,7 @@ def show_fourier_basis(G):
 
 ## Tests
 
-show_fourier_basis(graphs.Logo())
+#show_fourier_basis(graphs.Logo())
 show_fourier_basis(graphs.Ring(50))
 
 # G = graphs.FullConnected(10)

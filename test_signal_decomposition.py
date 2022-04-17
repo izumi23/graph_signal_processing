@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pygsp
 from pygsp import graphs, filters, plotting
+from numpy import pi, cos, sin
 
 plt.ion()
 plotting.BACKEND = 'matplotlib'
@@ -11,6 +12,7 @@ plt.rcParams['figure.autolayout'] = True
 
 def fourier_decomposition(G, s, ax1, ax2):
     G.plot_signal(s, ax=ax1, vertex_size=30, plot_name='')
+    ax1.set_axis_off()
     G.compute_fourier_basis()
     s_hat = G.gft(s)
     smoothness = (s @ G.L @ s) / (s @ s)
@@ -49,16 +51,29 @@ for i in range(G.N):
         s1[i] = 3 if x < 0.4 else 4
 
 s2 = np.array([G.coords[i][0] for i in range(G.N)])
-s3 = np.array([np.sin(10*(G.coords[i][0])) for i in range(G.N)])
+s3 = np.array([sin(10*(G.coords[i][0])) for i in range(G.N)])
 
 compare_fourier_decomposition([G, G, G], [s1, s2, s3])
 
 
 ## Test 2
 
+G = graphs.Ring(50)
 
+G1 = graphs.Ring(50)
+G1.W[0, 25] = G1.W[25, 0] = 1
+G1.Ne += 1
+G1.compute_laplacian()
 
+G2 = graphs.Ring(50)
+for i in range(-2, 3):
+    G2.W[i, 25-i] = G2.W[25-i, i] = 1
+    G2.Ne += 1
+G2.compute_laplacian()
 
+s = np.cos(np.arange(50)*2*pi/50)
+
+compare_fourier_decomposition([G, G1, G2], [s, s, s])
 
 
 
