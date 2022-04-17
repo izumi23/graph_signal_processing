@@ -33,9 +33,14 @@ def compare_fourier_decomposition(vG, vs):
     plt.close('all')
     nb_sig = len(vG)
     assert(nb_sig == len(vs))
-    fig, axes = plt.subplots(nb_sig, 2, figsize=(9, 3*nb_sig))
+    fig = plt.figure(figsize=(9, 3*nb_sig))
     for u in range(nb_sig):
-        fourier_decomposition(vG[u], vs[u], axes[u][0], axes[u][1])
+        if G.coords.shape[1] == 3 :
+            ax1 = fig.add_subplot(nb_sig, 2, 2*u+1, projection='3d')
+        else : 
+            ax1 = fig.add_subplot(nb_sig, 2, 2*u+1)
+        ax2 = fig.add_subplot(nb_sig, 2, 2*u+2)
+        fourier_decomposition(vG[u], vs[u], ax1, ax2)
 
 
 ## Test 1
