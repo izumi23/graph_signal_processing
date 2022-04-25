@@ -15,7 +15,7 @@ def filter(G, s, wc=None, order=1):
         s0 = G.igft(s_hat)
         smoothness = (s0 @ G.L @ s0) / (s0 @ s0)
         wc = 2 * smoothness
-    h = lambda w: 1 / np.sqrt(1 + (w/wc)**(2*n))
+    h = lambda w: 1 / np.sqrt(1 + (w/wc)**(2*order))
     f = filters.Filter(G, h)
     s1 = s + np.random.normal(0, 0.25, size=G.N)
     s2 = f.filter(s)
@@ -26,7 +26,7 @@ def filter(G, s, wc=None, order=1):
 plt.close('all')
 G = graphs.Logo()
 s = np.cos(0.01*np.arange(G.N))
-filter(G, s, 4)
+filter(G, s, wc=4, order=5)
 
 ## Test sur la Bretagne (nul)
 
