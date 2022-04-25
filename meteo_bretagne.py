@@ -92,6 +92,8 @@ temperature_df = data_df.pivot(
 # drop the NaNs
 temperature_df_no_nan = temperature_df.dropna(axis=0, how="any")
 
+temperature_array = temperature_df_no_nan.to_numpy()
+
 ##
 
 stations_np = stations_df[["Longitude", "Latitude"]].to_numpy()
@@ -120,3 +122,19 @@ def plot_graphe_bretagne(G):
     ax.set_axis_off()
     G.set_coordinates(stations_np)
     G.plot(ax=ax)
+
+##
+
+adjacency_matrix_gaussian = squareform(
+    get_exponential_similarity(dist_mat_condensed, sigma, 0.85)
+)
+
+import os
+os.makedirs("data", exist_ok=True)
+
+np.savetxt("data/GraphBretagne.txt", adjacency_matrix_gaussian, fmt='%.6f')
+np.savetxt("data/GraphCoords.txt", stations_np, fmt='%.6f')
+np.savetxt("data/Temperature.txt", temperature_array, fmt='%.1f')
+
+
+

@@ -10,17 +10,23 @@ plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['figure.autolayout'] = True
 
 
-def fourier_decomposition(G, s, ax1, ax2):
+def fourier_decomposition(G, s, ax1, ax2, h=None):
     G.plot_signal(s, ax=ax1, vertex_size=30, plot_name='')
     ax1.set_axis_off()
     G.compute_fourier_basis()
     s_hat = G.gft(s)
-    smoothness = (s @ G.L @ s) / (s @ s)
+    s_hat[0] = 0
+    s0 = G.igft(s_hat)
+    smoothness = (s0 @ G.L @ s0) / (s0 @ s0)
     label = 'λ_x = {:.3f}'.format(smoothness)
     ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
     ax2.plot(G.e, np.abs(s_hat), linestyle='None', marker='.')
     for i in range(G.N):
         ax2.plot([G.e[i], G.e[i]], [0, np.abs(s_hat[i])], color='C0')
+    if h is not None:
+        vx = np.linspace(0, G.e[-1], 201)
+        k = np.max(np.abs(s_hat))
+        ax2.plot(vx, np.array([k*h(x) for x in vx]), color='C2', linewidth=2, label='Filtre')
     ax2.legend()
 
 def show_fourier_decomposition(G, s, leave_open=False):
@@ -29,7 +35,7 @@ def show_fourier_decomposition(G, s, leave_open=False):
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     fourier_decomposition(G, s, axes[0], axes[1])
 
-def compare_fourier_decomposition(vG, vs):
+def compare_fourier_decomposition(vG, vs, h=None):
     plt.close('all')
     nb_sig = len(vG)
     assert(nb_sig == len(vs))
@@ -37,11 +43,13 @@ def compare_fourier_decomposition(vG, vs):
     for u in range(nb_sig):
         if G.coords.shape[1] == 3 :
             ax1 = fig.add_subplot(nb_sig, 2, 2*u+1, projection='3d')
-        else : 
+        else :
             ax1 = fig.add_subplot(nb_sig, 2, 2*u+1)
         ax2 = fig.add_subplot(nb_sig, 2, 2*u+2)
-        fourier_decomposition(vG[u], vs[u], ax1, ax2)
-
+        if u == 1:
+            fourier_decomposition(vG[u], vs[u], ax1, ax2, h)
+        else:
+            fourier_decomposition(vG[u], vs[u], ax1, ax2)
 
 ## Test 1
 
