@@ -10,14 +10,17 @@ plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['figure.autolayout'] = True
 
 
-def fourier_decomposition(G, s, ax1, ax2, h=None):
-    G.plot_signal(s, ax=ax1, vertex_size=30, plot_name='')
-    ax1.set_axis_off()
+def smoothness_and_gft(G, s):
     G.compute_fourier_basis()
     s_hat = G.gft(s)
     s_hat[0] = 0
     s0 = G.igft(s_hat)
-    smoothness = (s0 @ G.L @ s0) / (s0 @ s0)
+    return (s0 @ G.L @ s0) / (s0 @ s0), s_hat
+
+def fourier_decomposition(G, s, ax1, ax2, h=None):
+    G.plot_signal(s, ax=ax1, vertex_size=15, plot_name='')
+    ax1.set_axis_off()
+    smoothness, s_hat = smoothness_and_gft(G, s)
     label = 'λ_x = {:.3f}'.format(smoothness)
     ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
     ax2.plot(G.e, np.abs(s_hat), linestyle='None', marker='.')
@@ -35,70 +38,54 @@ def show_fourier_decomposition(G, s, leave_open=False):
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     fourier_decomposition(G, s, axes[0], axes[1])
 
-def compare_fourier_decomposition(vG, vs, h=None):
-    plt.close('all')
+def compare_fourier_decomposition(vG, vs, h=None, leave_open=False, title=""):
+    if not leave_open:
+        plt.close('all')
     nb_sig = len(vG)
     assert(nb_sig == len(vs))
     fig = plt.figure(figsize=(9, 3*nb_sig))
+    gs = plt.GridSpec(nb_sig, 2, width_ratios=[3, 2])
     for u in range(nb_sig):
-        if G.coords.shape[1] == 3 :
-            ax1 = fig.add_subplot(nb_sig, 2, 2*u+1, projection='3d')
-        else :
-            ax1 = fig.add_subplot(nb_sig, 2, 2*u+1)
-        ax2 = fig.add_subplot(nb_sig, 2, 2*u+2)
-        if u == 1:
-            fourier_decomposition(vG[u], vs[u], ax1, ax2, h)
+        ax1 = fig.add_subplot(gs[2*u])
+        ax2 = fig.add_subplot(gs[2*u+1])
+        fourier_decomposition(vG[u], vs[u], ax1, ax2, h if u==1 else None)
+    fig.suptitle(title)
+
+
+## Tests
+
+def test1():
+    G = graphs.DavidSensorNet()
+
+    s1 = np.zeros((G.N), dtype=float)
+    for i in range(G.N):
+        x, y = G.coords[i]
+        if y < 0.66:
+            s1[i] = 1 if x < 0.66 else 2
         else:
-            fourier_decomposition(vG[u], vs[u], ax1, ax2)
+            s1[i] = 3 if x < 0.4 else 4
 
-## Test 1
+    s2 = np.array([G.coords[i][0] for i in range(G.N)])
+    s3 = np.array([sin(10*(G.coords[i][0])) for i in range(G.N)])
 
-G = graphs.DavidSensorNet()
-
-s1 = np.zeros((G.N), dtype=float)
-for i in range(G.N):
-    x, y = G.coords[i]
-    if y < 0.66:
-        s1[i] = 1 if x < 0.66 else 2
-    else:
-        s1[i] = 3 if x < 0.4 else 4
-
-s2 = np.array([G.coords[i][0] for i in range(G.N)])
-s3 = np.array([sin(10*(G.coords[i][0])) for i in range(G.N)])
-
-compare_fourier_decomposition([G, G, G], [s1, s2, s3])
+    compare_fourier_decomposition([G, G, G], [s1, s2, s3])
 
 
-## Test 2
+def test2():
+    G = graphs.Ring(50)
 
-G = graphs.Ring(50)
+    G1 = graphs.Ring(50)
+    G1.W[0, 25] = G1.W[25, 0] = 1
+    G1.Ne += 1
+    G1.compute_laplacian()
 
-G1 = graphs.Ring(50)
-G1.W[0, 25] = G1.W[25, 0] = 1
-G1.Ne += 1
-G1.compute_laplacian()
+    G2 = graphs.Ring(50)
+    for i in range(-2, 3):
+        G2.W[i, 25-i] = G2.W[25-i, i] = 1
+        G2.Ne += 1
+    G2.compute_laplacian()
 
-G2 = graphs.Ring(50)
-for i in range(-2, 3):
-    G2.W[i, 25-i] = G2.W[25-i, i] = 1
-    G2.Ne += 1
-G2.compute_laplacian()
+    s = np.cos(np.arange(50)*2*pi/50)
 
-s = np.cos(np.arange(50)*2*pi/50)
-
-compare_fourier_decomposition([G, G1, G2], [s, s, s])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    compare_fourier_decomposition([G, G1, G2], [s, s, s])
 
