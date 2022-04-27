@@ -13,7 +13,10 @@ plt.rcParams['figure.autolayout'] = True
 def smoothness_and_gft(G, s):
     G.compute_fourier_basis()
     s_hat = G.gft(s)
-    s_hat[0] = 0
+    i = 0
+    while abs(G.e[i]) < 1e-14:
+        s_hat[i] = 0
+        i += 1
     s0 = G.igft(s_hat)
     return (s0 @ G.L @ s0) / (s0 @ s0), s_hat
 
