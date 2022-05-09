@@ -84,6 +84,15 @@ G = graphs.Graph(W)
 G.set_coordinates(A)
 show_fourier_basis(G)
 
+## Bretagne
+
+W = np.loadtxt("data/GraphBretagne.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+s = np.loadtxt("data/Temperature.txt")
+
+G = graphs.Graph(W)
+G.set_coordinates(coords)
+show_fourier_basis(G)
 
 
 

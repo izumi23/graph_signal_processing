@@ -24,8 +24,9 @@ def fourier_decomposition(G, s, ax1, ax2, h=None):
     G.plot_signal(s, ax=ax1, vertex_size=15, plot_name='')
     ax1.set_axis_off()
     smoothness, s_hat = smoothness_and_gft(G, s)
-    label = 'λ_x = {:.3f}'.format(smoothness)
-    ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
+    #label = 'λ_x = {:.3f}'.format(smoothness)
+    #ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
+    ax2.set_title('ν(x) = {:.3f}'.format(smoothness))
     ax2.plot(G.e, np.abs(s_hat), linestyle='None', marker='.')
     for i in range(G.N):
         ax2.plot([G.e[i], G.e[i]], [0, np.abs(s_hat[i])], color='C0')
@@ -33,7 +34,7 @@ def fourier_decomposition(G, s, ax1, ax2, h=None):
         vx = np.linspace(0, G.e[-1], 201)
         k = np.max(np.abs(s_hat))
         ax2.plot(vx, np.array([k*h(x) for x in vx]), color='C2', linewidth=2, label='Filtre')
-    ax2.legend()
+    #ax2.legend()
 
 def show_fourier_decomposition(G, s, leave_open=False):
     if not leave_open:
@@ -54,6 +55,19 @@ def compare_fourier_decomposition(vG, vs, h=None, leave_open=False, title=""):
         fourier_decomposition(vG[u], vs[u], ax1, ax2, h if u==1 else None)
     fig.suptitle(title)
 
+def compare_fourier_decomposition_horizontal(vG, vs, h=None, leave_open=False, title=""):
+    if not leave_open:
+        plt.close('all')
+    nb_sig = len(vG)
+    assert(nb_sig == len(vs))
+    fig = plt.figure(figsize=(5*nb_sig, 9))
+    gs = plt.GridSpec(2, nb_sig)
+    for u in range(nb_sig):
+        ax1 = fig.add_subplot(gs[u])
+        ax2 = fig.add_subplot(gs[nb_sig+u])
+        fourier_decomposition(vG[u], vs[u], ax1, ax2, h if u==1 else None)
+    fig.suptitle(title)
+
 
 ## Tests
 
@@ -68,10 +82,11 @@ def test1():
         else:
             s1[i] = 3 if x < 0.4 else 4
 
-    s2 = np.array([G.coords[i][0] for i in range(G.N)])
-    s3 = np.array([sin(10*(G.coords[i][0])) for i in range(G.N)])
+    # s3 = np.array([G.coords[i][0] for i in range(G.N)])
+    s3 = np.arange(G.N)
+    s2 = np.array([sin(10*(G.coords[i][0])) for i in range(G.N)])
 
-    compare_fourier_decomposition([G, G, G], [s1, s2, s3])
+    compare_fourier_decomposition_horizontal([G, G, G], [s1, s2, s3])
 
 
 def test2():
