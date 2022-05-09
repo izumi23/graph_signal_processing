@@ -37,15 +37,15 @@ G = graphs.Logo()
 G.compute_fourier_basis()
 s = np.sum(G.U[:, :G.N//3], axis=1)
 s1 = s + np.random.normal(0, 0.1*np.max(np.abs(s)), size=G.N)
-low_pass_filter(G, s, s1, wc=4.2, order=5)
+low_pass_filter(G, s, s1, wc=4.2, order=1)
 
 ## Cas parfait (heureusement ça marche)
 
 G = graphs.Logo()
 G.compute_fourier_basis()
 s = G.U[:, 2]
-s1 = s + np.random.normal(0, 0.1*np.max(np.abs(s)), size=G.N)
-low_pass_filter(G, s, s1, wc=0.2, order=5)
+s1 = s + np.random.normal(0, 0.2*np.max(np.abs(s)), size=G.N)
+low_pass_filter(G, s, s1, order=1)
 
 ## Test sur la Bretagne (nul)
 
@@ -55,8 +55,11 @@ s = np.loadtxt("data/Temperature.txt")
 
 G = graphs.Graph(W)
 G.set_coordinates(coords)
-s1 = s[0] + np.random.normal(0, 1, size=G.N)
-low_pass_filter(G, s[0], s1)
+
+k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+
+s1 = s[k] + np.random.normal(0, 3, size=G.N)
+low_pass_filter(G, s[k], s1, wc=2, order=1)
 
 ## Détection d'anomalie (marche bien)
 
@@ -64,9 +67,8 @@ G = graphs.Logo()
 G.compute_fourier_basis()
 s = np.sum(G.U[:, :G.N//3], axis=1)
 s1 = s.copy()
-s1[G.N//2] += 2*np.max(np.abs(s))
-high_pass_filter(G, s, s1, wc=12, order=5)
-
+s1[G.N//2] = 1.5*np.max(np.abs(s))
+high_pass_filter(G, s, s1, wc=20, order=1)
 
 ## Détection de 2 anomalies
 
@@ -94,7 +96,7 @@ G.set_coordinates(coords)
 k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
 
 s1 = s[k] + np.random.normal(0, 3, size=G.N)
-low_pass_filter(G, s[k], s1, order=5)
+low_pass_filter(G, s[k], s1, wc=2, order=1)
 
 ## Graphe de corrélation (essai 2)
 
@@ -111,9 +113,19 @@ for i in range(len(W)):
 G = graphs.Graph(W)
 G.set_coordinates(coords)
 
-s1 = s[0] + np.random.normal(0, 1, size=G.N)
-low_pass_filter(G, s[0], s1)
+k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
 
+s1 = s[k] + np.random.normal(0, 3, size=G.N)
+low_pass_filter(G, s[k], s1, wc=2, order=1)
+
+# s1 = s[0] + np.random.normal(0, 1, size=G.N)
+# low_pass_filter(G, s[0], s1)
+
+##
+
+s1 = s[k].copy()
+s1[G.N//2] = 1.5*np.max(np.abs(s[k]))
+high_pass_filter(G, s[k], s1, wc=20, order=1)
 
 
 
