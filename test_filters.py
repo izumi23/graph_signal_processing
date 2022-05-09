@@ -127,6 +127,20 @@ s1 = s[k].copy()
 s1[G.N//2] = 1.5*np.max(np.abs(s[k]))
 high_pass_filter(G, s[k], s1, wc=20, order=1)
 
+##
+
+k = np.argmax([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+
+s1 = s[k] + np.random.normal(0, 3, size=G.N)
+low_pass_filter(G, s[k], s1, wc=2, order=1)
+
+# s1 = s[0] + np.random.normal(0, 1, size=G.N)
+# low_pass_filter(G, s[0], s1)
+
+##
+
+k = np.argmax([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+high_pass_filter(G, s[k], s[k], wc=20, order=1)
 
 
 
