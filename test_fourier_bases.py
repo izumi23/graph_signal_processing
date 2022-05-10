@@ -1,21 +1,22 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pygsp
+import contextily as cx
 from pygsp import graphs, filters, plotting
 
 plt.ion()
 plotting.BACKEND = 'matplotlib'
-plt.rcParams['figure.figsize'] = (12, 8)
+plt.rcParams['figure.figsize'] = (12, 5)
 plt.rcParams['figure.autolayout'] = True
 
 
-def show_fourier_basis(G):
+def show_fourier_basis(G, show_map=False):
     plt.close('all')
-    nb_eig = 4
+    nb_eig = 2
     G.compute_fourier_basis()
 
     fig = plt.figure()
-    gs = plt.GridSpec(3, 2, height_ratios=[4, 4, 1])
+    gs = plt.GridSpec(2, 2, height_ratios=[4, 1])
 
     for i in range(nb_eig):
         if G.coords.shape[1] == 3 :
@@ -25,14 +26,17 @@ def show_fourier_basis(G):
         if i == nb_eig-1:
             i = G.N - 2
         G.plot_signal(G.U[:, i+1], vertex_size=30, ax=ax)
-        _ = ax.set_title('λ_{} = {:.3f}'.format(i+2, G.e[i+1]))
+        _ = ax.set_title('$λ_{{{}}} = {:.3f}$'.format(i+2, G.e[i+1]))
         ax.set_axis_off()
+        if show_map:
+            cx.add_basemap(ax, crs=open("data/Map.txt").read(), zoom=8)
 
-    gs = plt.GridSpec(3, 1, height_ratios=[4, 4, 1])
+    gs = plt.GridSpec(2, 1, height_ratios=[4, 1])
     ax = fig.add_subplot(gs[-1])
     ax.axes.yaxis.set_ticks([])
     ax.set_ylim(0, 1)
     ax.vlines(G.e, 0, 1)
+    ax.set_title('Spectre de $G$')
 
 
 ## Tests

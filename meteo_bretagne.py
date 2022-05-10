@@ -128,6 +128,7 @@ def plot_graphe_bretagne(G):
 adjacency_matrix_gaussian = squareform(
     get_exponential_similarity(dist_mat_condensed, sigma, 0.85)
 )
+crs = stations_gdf.crs.to_string()
 
 import os
 os.makedirs("data", exist_ok=True)
@@ -135,6 +136,7 @@ os.makedirs("data", exist_ok=True)
 np.savetxt("data/GraphBretagne.txt", adjacency_matrix_gaussian, fmt='%.6f')
 np.savetxt("data/GraphCoords.txt", stations_np, fmt='%.6f')
 np.savetxt("data/Temperature.txt", temperature_array, fmt='%.1f')
+open("data/Map.txt", 'w').write(crs)
 
 
 

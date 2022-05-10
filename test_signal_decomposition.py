@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pygsp
+import contextily as cx
 from pygsp import graphs, filters, plotting
 from numpy import pi, cos, sin
 
@@ -20,9 +21,11 @@ def smoothness_and_gft(G, s):
     s0 = G.igft(s_hat)
     return (s0 @ G.L @ s0) / (s0 @ s0), s_hat
 
-def fourier_decomposition(G, s, ax1, ax2, h=None):
+def fourier_decomposition(G, s, ax1, ax2, h=None, show_map=False):
     G.plot_signal(s, ax=ax1, vertex_size=15, plot_name='')
     ax1.set_axis_off()
+    if show_map:
+        cx.add_basemap(ax, crs=open("data/Map.txt").read(), zoom=8)
     smoothness, s_hat = smoothness_and_gft(G, s)
     #label = 'λ_x = {:.3f}'.format(smoothness)
     #ax2.axvline(smoothness, linewidth=2, color='C1', label=label)
@@ -42,7 +45,7 @@ def show_fourier_decomposition(G, s, leave_open=False):
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     fourier_decomposition(G, s, axes[0], axes[1])
 
-def compare_fourier_decomposition(vG, vs, h=None, leave_open=False, title=""):
+def compare_fourier_decomposition(vG, vs, h=None, leave_open=False, suptitle="", titles=None):
     if not leave_open:
         plt.close('all')
     nb_sig = len(vG)
@@ -53,9 +56,11 @@ def compare_fourier_decomposition(vG, vs, h=None, leave_open=False, title=""):
         ax1 = fig.add_subplot(gs[2*u])
         ax2 = fig.add_subplot(gs[2*u+1])
         fourier_decomposition(vG[u], vs[u], ax1, ax2, h if u==1 else None)
-    fig.suptitle(title)
+        if titles is not None:
+            ax1.set_title(titles[u])
+    fig.suptitle(suptitle)
 
-def compare_fourier_decomposition_horizontal(vG, vs, h=None, leave_open=False, title=""):
+def compare_fourier_decomposition_horizontal(vG, vs, h=None, leave_open=False, suptitle="", titles=None):
     if not leave_open:
         plt.close('all')
     nb_sig = len(vG)
@@ -106,4 +111,28 @@ def test2():
     s = np.cos(np.arange(50)*2*pi/50)
 
     compare_fourier_decomposition([G, G1, G2], [s, s, s])
+
+def show_bretagne(show_map=False, show_edges=True, title=""):
+    W = np.loadtxt("data/GraphBretagne.txt")
+    coords = np.loadtxt("data/GraphCoords.txt")
+    s = np.loadtxt("data/Temperature.txt")
+    G = graphs.Graph(W)
+    G.set_coordinates(coords)
+
+    fig, ax = plt.subplots()
+    G.plot_signal(s[0], ax=ax, show_edges=show_edges, plot_name=title)
+    if show_map:
+        cx.add_basemap(ax, crs=open("data/Map.txt").read(), zoom=8)
+    ax.set_axis_off()
+
+def gft_bretagne():
+    W = np.loadtxt("data/GraphBretagne.txt")
+    coords = np.loadtxt("data/GraphCoords.txt")
+    s = np.loadtxt("data/Temperature.txt")
+    G = graphs.Graph(W)
+    G.set_coordinates(coords)
+
+    kmin = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+    kmax = np.argmax([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+    compare_fourier_decomposition([G, G], [s[kmin], s[kmax]])
 
