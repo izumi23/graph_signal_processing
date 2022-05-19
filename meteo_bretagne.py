@@ -125,18 +125,29 @@ def plot_graphe_bretagne(G):
 
 ##
 
-adjacency_matrix_gaussian = squareform(
+W = squareform(
     get_exponential_similarity(dist_mat_condensed, sigma, 0.85)
 )
 crs = stations_gdf.crs.to_string()
 
+C = np.corrcoef(temperature_array, rowvar=False) - np.eye(len(W))
+t = 0.92
+Wc = C * (C >= t)
+
+H = np.zeros_like(W)
+for i in range(len(W)):
+    for j in range(len(W)):
+        if abs(W[i,j]) > 1e-14:
+            H[i,j] = C[i,j]
+
 import os
 os.makedirs("data", exist_ok=True)
 
-np.savetxt("data/GraphBretagne.txt", adjacency_matrix_gaussian, fmt='%.6f')
+np.savetxt("data/GraphBretagneNN.txt", W, fmt='%.6f')
 np.savetxt("data/GraphCoords.txt", stations_np, fmt='%.6f')
 np.savetxt("data/Temperature.txt", temperature_array, fmt='%.1f')
 open("data/Map.txt", 'w').write(crs)
-
+np.savetxt("data/GraphBretagneCorr.txt", C, fmt='%.6f')
+np.savetxt("data/GraphBretagneHybr.txt", H, fmt='%.6f')
 
 
