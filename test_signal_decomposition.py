@@ -36,7 +36,7 @@ def fourier_decomposition(G, s, ax1, ax2, h=None, show_map=False):
     if h is not None:
         vx = np.linspace(0, G.e[-1], 201)
         k = np.max(np.abs(s_hat))
-        ax2.plot(vx, np.array([k*h(x) for x in vx]), color='C2', linewidth=2, label='Filtre')
+        ax2.plot(vx, np.array([k*h(x) for x in vx]), color='C1', linewidth=2, label='Filtre')
     #ax2.legend()
 
 def show_fourier_decomposition(G, s, leave_open=False):
