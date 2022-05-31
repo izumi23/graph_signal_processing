@@ -28,11 +28,11 @@ def apply_ratfilter(p, q, L, s):
 def snr(s2, s):
     return -10 * np.log10( np.mean((s2-s)**2) / np.mean(s**2) )
 
-def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4):
+def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4, sep=1):
     if wc is None:
         G.estimate_lmax()
         wc = G.lmax/2
-    p, q = ratfilter(wc, P, Q, wmax)
+    p, q = ratfilter(wc, P, Q, sep=sep, wmax=wmax)
     s2 = apply_ratfilter(p, q, G.L, s1)
     suptitle = "SNR = {:.1f} --> {:.1f} dB".format(snr(s1, s), snr(s2, s))
     h = lambda w: np.polyval(q, w) / np.polyval(p, w)
@@ -50,7 +50,7 @@ G = graphs.Logo()
 G.compute_fourier_basis()
 s = np.sum(G.U[:, :G.N//3], axis=1)
 s1 = s + np.random.normal(0, 0.1*np.max(np.abs(s)), size=G.N)
-low_pass_filter(G, s, s1, wc=4.4, wmax=14)
+low_pass_filter(G, s, s1, wc=4.35, wmax=14, sep=0.5)
 
 ## Exemple 2 : Bretagne
 
