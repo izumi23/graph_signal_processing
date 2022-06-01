@@ -42,7 +42,7 @@ def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4, sep=1):
 ## On vérifie que le polynôme est bon
 
 p, q = ratfilter(10, 6, 4, sep=2, wmax=21, plot=True)
-p, q = ratfilter(2, 6, 4, wmax=8.5, plot=True)
+p, q = ratfilter(2, 1, 0, wmax=40, plot=True)
 
 ## Exemple 1 : Logo
 

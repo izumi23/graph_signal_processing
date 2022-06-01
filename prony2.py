@@ -8,7 +8,7 @@ plt.show()
 
 def prony(vx, vy, P, Q, plot=False):
     """
-    Approximation de moindres carrés vy = q(vx)/p(vx),
+    Approximation de moindres carrés vy*p(vx) = q(vx),
     où p et q sont des polynômes de degré P et Q respectivement,
     et p(0) = 1.
     """
@@ -20,6 +20,8 @@ def prony(vx, vy, P, Q, plot=False):
     ub = np.inf * np.ones((P+Q+2))
     lb[0] = 1 - 1e-14
     ub[0] = 1 + 1e-14
+    lb[P+1] = 1 - 1e-14
+    ub[P+1] = 1 + 1e-14
     b = np.zeros((len(vx)))
 
     sol_full = scipy.optimize.lsq_linear(A, b, bounds=(lb,ub))
