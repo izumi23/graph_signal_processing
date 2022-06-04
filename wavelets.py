@@ -5,10 +5,11 @@ from pygsp import graphs, filters, plotting
 
 plt.ion()
 plt.show()
+plt.rcParams['figure.autolayout'] = True
 
 ## Génération des filtres
 
-gamma = 1.384
+wavelet_type = "Hammond"
 
 def g0(x):
     if x < 1:
@@ -18,7 +19,7 @@ def g0(x):
     else:
         return 4*x**-2
 
-g = np.vectorize(lambda x: g0(x)/gamma)
+g = np.vectorize(lambda x: g0(x)/1.384)
 
 def h(x, lmax):
     return 1.3 * np.exp(-( 8*x/(0.3*lmax) )**4)
@@ -43,22 +44,58 @@ def basis(G, r):
     G.estimate_lmax()
     vfreq = np.concatenate(([0], frequencies(G.lmax, r)))
     for i, freq in enumerate(vfreq):
-        f = lambda x: (h(x, lmax) if freq == 0 else g(x/freq))
+        f = lambda x: (h(x, G.lmax) if freq == 0 else g(x/freq))
         for node in range(G.N):
             d = np.zeros((G.N))
             d[node] = 1
             B[i, node] = pygsp.filters.Filter(G, f).filter(d)
     return B
 
-def coefficients(G, s, r, B=None):
+def coefficients(G, B, s):
     #coefficients sur toute la famille d'ondelettes
-    C = np.zeros((r+1, G.N))
-    if B is None:
-        B = basis(G, r)
-    for i in range(r+1):
+    C = np.zeros((B.shape[0], B.shape[1]))
+    for i in range(len(C)):
         for node in range(G.N):
             C[i, node] = B[i, node] @ s
     return C
+
+def show_basis(G, B, node):
+    r = B.shape[0]//2
+    fig, axes = plt.subplots(2, r, figsize=(4*r,6))
+    for i in range(B.shape[0]):
+        ax = axes[i//r][i%r]
+        G.plot_signal(B[i, node], ax=ax, vertex_size=20)
+        ax.set_title("")
+        ax.set_axis_off()
+    fig.suptitle("Ondelettes de " + wavelet_type)
+
+def show_coefficients(G, B, C, s, suptitle=""):
+    loc = np.argsort(C.flatten())
+    fig = plt.figure(figsize=(10,8))
+    gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
+    for k in range(4):
+        ax = fig.add_subplot(gs[k])
+        i, node = loc[-k]//G.N, loc[-k]%G.N
+        s1 = s if k==0 else B[i, node]
+        G.plot_signal(s1, ax=ax, vertex_size=20)
+        title = "Signal" if k==0 else "Ondelette "+str((i, node))
+        ax.set_title(title)
+        ax.set_axis_off()
+    fig.suptitle(suptitle)
+    gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
+    ax = fig.add_subplot(gs[-1])
+    im = ax.imshow(C)
+    fig.colorbar(im, ax=ax)
+
+def redundancy(B):
+    #redondance des éléments de la base avec les autres,
+    #mesurée comme la somme des corrélations au carré
+    Br = B.reshape(-1, B.shape[2])
+    Corr = np.corrcoef(Br)
+    Corr = np.nan_to_num(Corr)
+    Corr *= Corr
+    R = np.sum(Corr, axis=1) - 1
+    return R.reshape(B.shape[0], -1)
 
 ## Visualiser l'ensemble de filtres
 
@@ -76,25 +113,45 @@ for w0 in frequencies(lmax, r):
 ax.plot(l, total, label="total des carrés")
 ax.legend()
 
+## Visualiser un extrait de la base
+
+plt.close('all')
+G = graphs.DavidSensorNet()
+B = basis(G, 5)
+show_basis(G, B, G.N//2)
+
 ## Exemple 1 : Dirac
 
 G = graphs.DavidSensorNet()
 s = np.zeros((G.N))
 s[G.N//2] = 1
-C = coefficients(G, s, 5)
+B = basis(G, 5)
+C = coefficients(G, B, s)
 plt.close('all')
-plt.imshow(C)
+show_coefficients(G, B, C, s)
 
 ## Exemple 2 : Signal lisse
 
 G = graphs.DavidSensorNet()
 s = np.array([np.sin(G.coords[i,0]) for i in range(G.N)])
-C = coefficients(G, s, 5)
+B = basis(G, 5)
+C = coefficients(G, B, s)
 plt.close('all')
-plt.imshow(C)
+show_coefficients(G, B, C, s)
 
+## Mesure de la redondance
 
-
+plt.close('all')
+G = graphs.DavidSensorNet()
+B = basis(G, 5)
+for i in range(3):
+    for node in range(i%3, G.N, 3):
+        B[i, node] = 0
+    for node in range((i+1)%3, G.N, 3):
+        B[i, node] = 0
+R = redundancy(B)
+plt.imshow(R)
+plt.colorbar()
 
 
 
