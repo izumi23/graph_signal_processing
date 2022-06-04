@@ -7,11 +7,12 @@ plt.ion()
 plt.show()
 plt.rcParams['figure.autolayout'] = True
 
-## Génération des filtres
+## Génération des filtres (Hammond)
 
 wavelet_type = "Hammond"
 
 def g0(x):
+    #passe-bande
     if x < 1:
         return x**2
     elif x <= 2:
@@ -21,30 +22,39 @@ def g0(x):
 
 g = np.vectorize(lambda x: g0(x)/1.384)
 
-def h(x, lmax):
-    return 1.3 * np.exp(-( 8*x/(0.3*lmax) )**4)
+def h(x):
+    #passe-bas
+    return 1.3 * np.exp(-(2/3*x)**4)
+
+## Génération des filtres (Mexican Hat)
+
+wavelet_type = "Mexican Hat"
+g = lambda x: x * np.exp(1-x)
+h = lambda x: 1.3 * np.exp(-x**4)
+
+## Calculs sur la famille d'ondelettes
 
 def frequencies(lmax, r):
     return np.geomspace(lmax/40, lmax/2, r)
 
-## Calculs sur la base d'ondelettes
-
 def coef(G, s, node, freq, lmax=None):
-    #un seul coefficient
+    #un coefficient sur la famille ci-après
     if lmax is None:
         G.estimate_lmax()
         lmax = G.lmax
     d = np.zeros_like(s)
     d[node] = 1
-    f = lambda x: (h(x, lmax) if freq == 0 else g(x/freq))
+    f = lambda x: (h(40*x/lmax) if freq == 0 else g(x/freq))
     return pygsp.filters.Filter(G, f).filter(d) @ s
 
 def basis(G, r):
+    #famille d'ondelettes avec r+1 ondelettes par sommet
+    #(1 passe bas et r passe-bandes)
     B = np.zeros((r+1, G.N, G.N))
     G.estimate_lmax()
     vfreq = np.concatenate(([0], frequencies(G.lmax, r)))
     for i, freq in enumerate(vfreq):
-        f = lambda x: (h(x, G.lmax) if freq == 0 else g(x/freq))
+        f = lambda x: (h(40*x/lmax) if freq == 0 else g(x/freq))
         for node in range(G.N):
             d = np.zeros((G.N))
             d[node] = 1
@@ -59,6 +69,18 @@ def coefficients(G, B, s):
             C[i, node] = B[i, node] @ s
     return C
 
+def redundancy(B):
+    #redondance des éléments de la famille avec les autres,
+    #mesurée comme la somme des corrélations au carré
+    Br = B.reshape(-1, B.shape[2])
+    Corr = np.corrcoef(Br)
+    Corr = np.nan_to_num(Corr)
+    Corr *= Corr
+    R = np.sum(Corr, axis=1) - 1
+    return R.reshape(B.shape[0], -1)
+
+## Illustrations
+
 def show_basis(G, B, node):
     r = B.shape[0]//2
     fig, axes = plt.subplots(2, r, figsize=(4*r,6))
@@ -69,7 +91,7 @@ def show_basis(G, B, node):
         ax.set_axis_off()
     fig.suptitle("Ondelettes de " + wavelet_type)
 
-def show_coefficients(G, B, C, s, suptitle=""):
+def show_components(G, B, C, s, suptitle=""):
     loc = np.argsort(C.flatten())
     fig = plt.figure(figsize=(10,8))
     gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
@@ -87,27 +109,17 @@ def show_coefficients(G, B, C, s, suptitle=""):
     im = ax.imshow(C)
     fig.colorbar(im, ax=ax)
 
-def redundancy(B):
-    #redondance des éléments de la base avec les autres,
-    #mesurée comme la somme des corrélations au carré
-    Br = B.reshape(-1, B.shape[2])
-    Corr = np.corrcoef(Br)
-    Corr = np.nan_to_num(Corr)
-    Corr *= Corr
-    R = np.sum(Corr, axis=1) - 1
-    return R.reshape(B.shape[0], -1)
-
 ## Visualiser l'ensemble de filtres
 
 l = np.linspace(0, 10, 501)
 lmax = 10
 r = 7
 
-total = np.array([h(x, lmax)**2 + np.sum([g(x/w0)**2 for w0 in frequencies(lmax, r)]) for x in l])
+total = np.array([h(40*x/lmax)**2 + np.sum([g(x/w0)**2 for w0 in frequencies(lmax, r)]) for x in l])
 
 plt.close('all')
 fig, ax = plt.subplots()
-ax.plot(l, np.array([h(x, lmax) for x in l]), label="passe-bas")
+ax.plot(l, np.array([h(40*x/lmax) for x in l]), label="passe-bas")
 for w0 in frequencies(lmax, r):
     ax.plot(l, np.array([g(x/w0) for x in l]), label="{:.2f}".format(w0))
 ax.plot(l, total, label="total des carrés")
@@ -128,7 +140,7 @@ s[G.N//2] = 1
 B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
-show_coefficients(G, B, C, s)
+show_components(G, B, C, s)
 
 ## Exemple 2 : Signal lisse
 
@@ -137,7 +149,7 @@ s = np.array([np.sin(G.coords[i,0]) for i in range(G.N)])
 B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
-show_coefficients(G, B, C, s)
+show_components(G, B, C, s)
 
 ## Mesure de la redondance
 
