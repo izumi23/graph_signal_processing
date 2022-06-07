@@ -52,6 +52,7 @@ def basis(G, r):
     #(1 passe bas et r passe-bandes)
     B = np.zeros((r+1, G.N, G.N))
     G.estimate_lmax()
+    lmax = G.lmax
     vfreq = np.concatenate(([0], frequencies(G.lmax, r)))
     for i, freq in enumerate(vfreq):
         f = lambda x: (h(40*x/lmax) if freq == 0 else g(x/freq))
@@ -68,6 +69,38 @@ def coefficients(G, B, s):
         for node in range(G.N):
             C[i, node] = B[i, node] @ s
     return C
+
+def matching_pursuit(G, B, s, d, suptitle=""):
+    #décompose le signal en lui soustrayant à chaque étape l'ondelette prédominante
+    signal = s.copy()
+    print("La fonction a pour norme {a:2f}".format(a=(signal@signal)**0.5))
+    fig = plt.figure(figsize=(10,8))
+    gs = plt.GridSpec(2*(d//2 + 1), 2, height_ratios=[2-k%2 for k in range(2*(d//2 + 1))])
+    ax = fig.add_subplot(gs[0])
+    G.plot_signal(signal, ax=ax, vertex_size=20)
+    for k in range(1,d+1):
+        C = coefficients(G, B, signal)
+        loc = np.argsort(C.flatten())
+        ax = fig.add_subplot(gs[k + 2*(k//2)])
+        i, node = loc[-1]//G.N, loc[-1]%G.N
+        G.plot_signal(B[i, node], ax=ax, vertex_size=20)
+        title = "Signal" if k==0 else "Ondelette "+str((i, node))
+        ax.set_title(title)
+        ax.set_axis_off()
+        signal = signal - C[i, node]*B[i,node]/(B[i,node]@B[i,node])
+        
+        s = (k%2 == 1)
+        ax = fig.add_subplot(gs[k + 2*(k//2) + 2*s-1])
+        im = ax.imshow(C)
+        fig.colorbar(im, ax=ax)
+    fig.suptitle(suptitle)
+    C = coefficients(G, B, signal)
+    s = (d%2 == 0)
+    ax = fig.add_subplot(gs[-1 -s])
+    im = ax.imshow(C)
+    fig.colorbar(im, ax=ax)
+    
+    print("Le reste a pour norme {a:2f}".format(a=(signal@signal)**0.5))
 
 def redundancy(B):
     #redondance des éléments de la famille avec les autres,
@@ -141,6 +174,7 @@ B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
 show_components(G, B, C, s)
+matching_pursuit(G, B, s, 3)
 
 ## Exemple 2 : Signal lisse
 
@@ -150,6 +184,7 @@ B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
 show_components(G, B, C, s)
+matching_pursuit(G, B, s, 3)
 
 ## Mesure de la redondance
 
