@@ -80,7 +80,7 @@ def matching_pursuit(G, B, s, d, suptitle=""):
     G.plot_signal(signal, ax=ax, vertex_size=20)
     for k in range(1,d+1):
         C = coefficients(G, B, signal)
-        loc = np.argsort(C.flatten())
+        loc = np.argsort(np.abs(C).flatten())
         ax = fig.add_subplot(gs[k + 2*(k//2)])
         i, node = loc[-1]//G.N, loc[-1]%G.N
         G.plot_signal(B[i, node], ax=ax, vertex_size=20)
@@ -88,7 +88,7 @@ def matching_pursuit(G, B, s, d, suptitle=""):
         ax.set_title(title)
         ax.set_axis_off()
         signal = signal - C[i, node]*B[i,node]/(B[i,node]@B[i,node])
-        
+
         s = (k%2 == 1)
         ax = fig.add_subplot(gs[k + 2*(k//2) + 2*s-1])
         im = ax.imshow(C)
@@ -99,7 +99,7 @@ def matching_pursuit(G, B, s, d, suptitle=""):
     ax = fig.add_subplot(gs[-1 -s])
     im = ax.imshow(C)
     fig.colorbar(im, ax=ax)
-    
+
     print("Le reste a pour norme {a:2f}".format(a=(signal@signal)**0.5))
 
 def redundancy(B):
@@ -125,7 +125,7 @@ def show_basis(G, B, node):
     fig.suptitle("Ondelettes de " + wavelet_type)
 
 def show_components(G, B, C, s, suptitle=""):
-    loc = np.argsort(C.flatten())
+    loc = np.argsort(np.abs(C).flatten())
     fig = plt.figure(figsize=(10,8))
     gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
     for k in range(4):
