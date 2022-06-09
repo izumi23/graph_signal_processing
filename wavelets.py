@@ -127,11 +127,11 @@ def show_haar_basis(G, B):
     fig = plt.figure(figsize=((12,6)))
     gs = plt.GridSpec(2, 3)
     for i in range(4):
-        ax = fig.add_subplot(gs[4*(i//2) + i%2])
+        ax = fig.add_subplot(gs[3*(i//2) + i%2])
         if i == 3:
             i = G.N - 2
         G.plot_signal(B[i+1], vertex_size=30, ax=ax)
-        ax.set_title('$u_{{{}}}$'.format(i+1))
+        ax.set_title('$u_{{{}}}$'.format(i+2))
         ax.set_axis_off()
     gs = plt.GridSpec(1, 3)
     ax = fig.add_subplot(gs[-1])
