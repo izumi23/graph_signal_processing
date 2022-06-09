@@ -70,37 +70,19 @@ def coefficients(G, B, s):
             C[i, node] = B[i, node] @ s
     return C
 
-def matching_pursuit(G, B, s, d, suptitle=""):
-    #décompose le signal en lui soustrayant à chaque étape l'ondelette prédominante
+def matching_pursuit(G, B, s, d):
     signal = s.copy()
-    print("La fonction a pour norme {a:2f}".format(a=(signal@signal)**0.5))
-    fig = plt.figure(figsize=(10,8))
-    gs = plt.GridSpec(2*(d//2 + 1), 2, height_ratios=[2-k%2 for k in range(2*(d//2 + 1))])
-    ax = fig.add_subplot(gs[0])
-    G.plot_signal(signal, ax=ax, vertex_size=20)
-    for k in range(1,d+1):
+    Base = np.zeros((d, G.N))
+    Coefs = np.zeros((d+1, B.shape[0], B.shape[1]))
+    for k in range(d):
         C = coefficients(G, B, signal)
-        loc = np.argsort(np.abs(C).flatten())
-        ax = fig.add_subplot(gs[k + 2*(k//2)])
+        loc = np.argsort(C.flatten())
         i, node = loc[-1]//G.N, loc[-1]%G.N
-        G.plot_signal(B[i, node], ax=ax, vertex_size=20)
-        title = "Signal" if k==0 else "Ondelette "+str((i, node))
-        ax.set_title(title)
-        ax.set_axis_off()
-        signal = signal - C[i, node]*B[i,node]/(B[i,node]@B[i,node])
-
-        s = (k%2 == 1)
-        ax = fig.add_subplot(gs[k + 2*(k//2) + 2*s-1])
-        im = ax.imshow(C)
-        fig.colorbar(im, ax=ax)
-    fig.suptitle(suptitle)
-    C = coefficients(G, B, signal)
-    s = (d%2 == 0)
-    ax = fig.add_subplot(gs[-1 -s])
-    im = ax.imshow(C)
-    fig.colorbar(im, ax=ax)
-
-    print("Le reste a pour norme {a:2f}".format(a=(signal@signal)**0.5))
+        Coefs[k] = C
+        Base[k] = B[i,node]
+        signal = signal - C[i, node]/(B[i,node]@B[i,node])*B[i,node] 
+    Coefs[d] = coefficients(G, B, signal)
+    return Base, Coefs, -10 * np.log10( np.mean((signal)**2) / np.mean(s**2))
 
 def redundancy(B):
     #redondance des éléments de la famille avec les autres,
@@ -141,6 +123,34 @@ def show_components(G, B, C, s, suptitle=""):
     ax = fig.add_subplot(gs[-1])
     im = ax.imshow(C)
     fig.colorbar(im, ax=ax)
+    
+def show_matching_pursuit(G, B, s, d, suptitle=""):
+    Base, Coefs, Snr = matching_pursuit(G, B, s, d)
+    fig = plt.figure(figsize=(10,8))
+    gs = plt.GridSpec(2*(d//2 + 1), 2, height_ratios=[2-k%2 for k in range(2*(d//2 + 1))])
+    ax = fig.add_subplot(gs[0])
+    G.plot_signal(s, ax=ax, vertex_size=20)
+    title = "Signal"
+    ax.set_title(title)
+    ax.set_axis_off()
+    for k in range(1,d+1):
+        ax = fig.add_subplot(gs[k + 2*(k//2)])
+        G.plot_signal(Base[k-1], ax=ax, vertex_size=20)
+        title = "Ondelette "
+        ax.set_title(title)
+        ax.set_axis_off()
+        
+        s = (k%2 == 1)
+        ax = fig.add_subplot(gs[k + 2*(k//2) + 2*s-1])
+        im = ax.imshow(Coefs[k-1])
+        fig.colorbar(im, ax=ax)
+    fig.suptitle(suptitle)
+    s = (d%2 == 0)
+    ax = fig.add_subplot(gs[-1 -s])
+    im = ax.imshow(Coefs[d])
+    fig.colorbar(im, ax=ax)
+    
+    print("On obtient un SNR de {n:.2f}".format(n=Snr))
 
 ## Visualiser l'ensemble de filtres
 
@@ -174,7 +184,7 @@ B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
 show_components(G, B, C, s)
-matching_pursuit(G, B, s, 3)
+show_matching_pursuit(G, B, s, 3)
 
 ## Exemple 2 : Signal lisse
 
@@ -184,7 +194,7 @@ B = basis(G, 5)
 C = coefficients(G, B, s)
 plt.close('all')
 show_components(G, B, C, s)
-matching_pursuit(G, B, s, 3)
+show_matching_pursuit(G, B, s, 3)
 
 ## Mesure de la redondance
 
