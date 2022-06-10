@@ -49,9 +49,12 @@ def coefficients(B, s):
     return B @ s
 
 def snr(s, s_compr):
+    #signal-to-noise ratio (logarithmic)
     return -10 * np.log10( 1e-14 + np.mean((s_compr-s)**2) / np.mean(s**2) )
 
-def compression(G, B, s):
+def compressed_snr(G, B, s):
+    #on retire les composantes les plus faibles une par une
+    #et on calcule le SNR à chaque étape
     s_hat = coefficients(B, s)
     order = np.argsort(np.abs(s_hat))
     snr_vect = np.zeros((G.N-1))
@@ -95,16 +98,18 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     if suptitle is None:
         suptitle = "Composantes principales dans la base de Haar"
     fig.suptitle(suptitle)
+
     gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
     gs = gs[-1].subgridspec(1, 2)
+    mk = '.' if G.N < 100 else 'None'
     ax = fig.add_subplot(gs[-2])
-    ax.plot(np.arange(1, G.N+1), sh, linestyle='None', marker='.')
+    ax.plot(np.arange(1, G.N+1), sh, linestyle='None', marker=mk)
     for n in range(G.N):
         ax.plot([n+1, n+1], [0, sh[n]], color='C0')
     ax.set_title("Coefficients dans la décomposition")
     ax = fig.add_subplot(gs[-1])
-    snr_vect = compression(G, B, s)
-    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker='.')
+    snr_vect = compressed_snr(G, B, s)
+    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker=mk)
     ax.set_ylim(-2, 40)
     ax.set_title("SNR vs nombre de composantes gardées")
 
@@ -155,11 +160,3 @@ s_hat = coefficients(B, s)
 plt.close('all')
 show_components(G, B, s, s_hat)
 
-## Compression d'un signal
-
-snr_vect = compression(G, B, s)
-#plt.close('all')
-marker = 'o' if G.N < 100 else 'None'
-plt.plot(np.arange(1, G.N), np.flip(snr_vect), marker='o')
-plt.ylim(-2, 40)
-plt.title("SNR en fonction du nombre de composantes gardées")
