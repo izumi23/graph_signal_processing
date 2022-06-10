@@ -52,41 +52,6 @@ def impulse_basis(G, r):
             B[G.N*l + node] = pygsp.filters.Filter(G, f).filter(d)
     return B
 
-def haar_basis_ordered(N):
-    #les lignes de B forment une base de Haar en dimension N,
-    #les vecteurs de base étant ordonnés par support décroissant
-    N2 = 2**(1 + int(np.log2(N)))
-    B = [[0. for j in range(N)] for i in range(N2)]
-    for j in range(N):
-        B[0][j] = 1./np.sqrt(N)
-    def dicho(a, b, i):
-        if b-a >= 2:
-            c = (a+b)//2
-            for j in range(a, c):
-                B[i][j] = np.sqrt((b-c)/(c-a)/(b-a))
-            for j in range(c, b):
-                B[i][j] = -np.sqrt((c-a)/(b-c)/(b-a))
-            dicho(a, c, 2*i)
-            dicho(c, b, 2*i+1)
-    dicho(0, N, 1)
-    i = 1
-    while i < len(B):
-        if max(B[i]) <= 1e-14:
-            B.pop(i)
-        else:
-            i += 1
-    return np.array(B)
-
-def haar_basis(G):
-    #on permute les colonnes de B pour que les sommets soient
-    #classés selon leur valeur sur le 2ème vecteur propre
-    G.compute_laplacian()
-    G.compute_fourier_basis()
-    s = G.U[:,1]
-    nodes = np.argsort(s)
-    B = haar_basis_ordered(G.N)
-    return B[:, np.argsort(nodes)]
-
 def coefficients(G, B, s):
     #coefficients sur toute la famille d'ondelettes
     return B @ s
@@ -122,39 +87,6 @@ def show_impulse_basis(G, B, node):
         ax.set_title("")
         ax.set_axis_off()
     fig.suptitle("Ondelettes de " + wavelet_type + ", centrées en " + str(node))
-
-def show_haar_basis(G, B):
-    fig = plt.figure(figsize=((12,6)))
-    gs = plt.GridSpec(2, 3)
-    for i in range(4):
-        ax = fig.add_subplot(gs[3*(i//2) + i%2])
-        if i == 3:
-            i = G.N - 2
-        G.plot_signal(B[i+1], vertex_size=30, ax=ax)
-        ax.set_title('$u_{{{}}}$'.format(i+2))
-        ax.set_axis_off()
-    gs = plt.GridSpec(1, 3)
-    ax = fig.add_subplot(gs[-1])
-    im = ax.imshow(B)
-    fig.colorbar(im, ax=ax)
-
-def show_components(G, B, C, s, suptitle=""):
-    loc = np.argsort(np.abs(C))
-    fig = plt.figure(figsize=(10,8))
-    gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
-    for k in range(4):
-        ax = fig.add_subplot(gs[k])
-        s1 = s if k==0 else B[loc[-k]]
-        G.plot_signal(s1, ax=ax, vertex_size=20)
-        l, node = loc[-k]//G.N, loc[-k]%G.N
-        title = "Signal" if k==0 else "Ondelette "+str((l, node))
-        ax.set_title(title)
-        ax.set_axis_off()
-    fig.suptitle(suptitle)
-    gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
-    ax = fig.add_subplot(gs[-1])
-    im = ax.imshow(C.reshape(-1, G.N))
-    fig.colorbar(im, ax=ax)
 
 def show_matching_pursuit(G, B, s, d, suptitle=""):
     Base, Coefs, Snr = matching_pursuit(G, B, s, d)
@@ -206,13 +138,6 @@ plt.close('all')
 G = graphs.DavidSensorNet()
 B = impulse_basis(G, 5)
 show_impulse_basis(G, B, G.N//2)
-
-## Visualier la base de Haar
-
-plt.close('all')
-G = graphs.DavidSensorNet()
-B = haar_basis(G)
-show_haar_basis(G, B)
 
 ## Exemple 1 : Dirac
 
