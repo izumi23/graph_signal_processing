@@ -48,6 +48,20 @@ def coefficients(B, s):
     #coefficients de la décomposition de s sur la base B
     return B @ s
 
+def snr(s, s_compr):
+    return -10 * np.log10( 1e-14 + np.mean((s_compr-s)**2) / np.mean(s**2) )
+
+def compression(G, B, s):
+    s_hat = coefficients(B, s)
+    order = np.argsort(np.abs(s_hat))
+    snr_vect = np.zeros((G.N-1))
+    s_compr = s.copy()
+    for k in range(G.N-1):
+        n = order[k]
+        s_compr -= s_hat[n] * B[n]
+        snr_vect[k] = snr(s, s_compr)
+    return snr_vect
+
 ## Illustration
 
 def show_haar_basis(G, B):
@@ -65,7 +79,7 @@ def show_haar_basis(G, B):
     im = ax.imshow(B)
     fig.colorbar(im, ax=ax, aspect=40)
 
-def show_components(G, B, s, s_hat, nb_coef=5, suptitle=""):
+def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     sh = np.abs(s_hat)
     comp = np.argsort(sh)
     fig = plt.figure(figsize=(4*((nb_coef+2)//2) ,8))
@@ -78,12 +92,20 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=""):
         title = "Signal" if k==0 else "$\\hat s_{{{}}} = {:.3f}$".format(n, s_hat[n])
         ax.set_title(title)
         ax.set_axis_off()
+    if suptitle is None:
+        suptitle = "Composantes principales dans la base de Haar"
     fig.suptitle(suptitle)
-    gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
-    ax = fig.add_subplot(gs[-1])
+    gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
+    ax = fig.add_subplot(gs[-2])
     ax.plot(np.arange(1, G.N+1), sh, linestyle='None', marker='.')
     for n in range(G.N):
         ax.plot([n+1, n+1], [0, sh[n]], color='C0')
+    ax.title("Coefficients dans la décomposition")
+    ax = fig.add_subplot(gs[-1])
+    snr_vect = compression(G, B, s)
+    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker='o' if G.N < 100 else 'None')
+    ax.ylim(-2, 40)
+    ax.title("SNR vs nombre de composantes gardées")
 
 ## Visualiser la base classique de Haar (ordonnée)
 
@@ -110,10 +132,33 @@ show_components(G, B, s, s_hat)
 
 ## Exemple 2 : Signal lisse
 
-G = graphs.DavidSensorNet()
-s = np.array([np.sin(G.coords[i,0]) for i in range(G.N)])
+G = graphs.Logo()
+s = np.array([np.sin(0.01*G.coords[i,0]) for i in range(G.N)])
 s = s - np.average(s)
 B = haar_basis(G)
 s_hat = coefficients(B, s)
 plt.close('all')
 show_components(G, B, s, s_hat)
+
+## Exemple 3 : Bretagne
+
+H = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+temp = np.loadtxt("data/Temperature.txt")
+G = graphs.Graph(H)
+G.set_coordinates(coords)
+
+s = temp[0] - np.average(temp[0])
+B = haar_basis(G)
+s_hat = coefficients(B, s)
+plt.close('all')
+show_components(G, B, s, s_hat)
+
+## Compression d'un signal
+
+snr_vect = compression(G, B, s)
+#plt.close('all')
+marker = 'o' if G.N < 100 else 'None'
+plt.plot(np.arange(1, G.N), np.flip(snr_vect), marker='o')
+plt.ylim(-2, 40)
+plt.title("SNR en fonction du nombre de composantes gardées")
