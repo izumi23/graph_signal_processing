@@ -95,17 +95,18 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     if suptitle is None:
         suptitle = "Composantes principales dans la base de Haar"
     fig.suptitle(suptitle)
-    gs = plt.GridSpec(3, 2, height_ratios=[2, 2, 1])
+    gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
+    gs = gs[-1].subgridspec(1, 2)
     ax = fig.add_subplot(gs[-2])
     ax.plot(np.arange(1, G.N+1), sh, linestyle='None', marker='.')
     for n in range(G.N):
         ax.plot([n+1, n+1], [0, sh[n]], color='C0')
-    ax.title("Coefficients dans la décomposition")
+    ax.set_title("Coefficients dans la décomposition")
     ax = fig.add_subplot(gs[-1])
     snr_vect = compression(G, B, s)
-    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker='o' if G.N < 100 else 'None')
-    ax.ylim(-2, 40)
-    ax.title("SNR vs nombre de composantes gardées")
+    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker='.')
+    ax.set_ylim(-2, 40)
+    ax.set_title("SNR vs nombre de composantes gardées")
 
 ## Visualiser la base classique de Haar (ordonnée)
 
