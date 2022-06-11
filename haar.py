@@ -69,6 +69,7 @@ def compressed_snr(G, B, s):
 
 def show_haar_basis(G, B):
     fig = plt.figure(figsize=((12,6)))
+    #affichage des 4 premiers éléments de la base
     gs = plt.GridSpec(2, 3)
     for i in range(4):
         ax = fig.add_subplot(gs[3*(i//2) + i%2])
@@ -77,6 +78,7 @@ def show_haar_basis(G, B):
         G.plot_signal(B[i+1], vertex_size=30, ax=ax)
         ax.set_title('$u_{{{}}}$'.format(i+2))
         ax.set_axis_off()
+    #affichage 2D des N vecteurs de la base
     gs = plt.GridSpec(1, 3)
     ax = fig.add_subplot(gs[-1])
     im = ax.imshow(B)
@@ -86,6 +88,8 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     sh = np.abs(s_hat)
     comp = np.argsort(sh)
     fig = plt.figure(figsize=(4*((nb_coef+2)//2) ,8))
+    #affichage du signal et de ses nb_coef composantes les plus
+    #importantes
     gs = plt.GridSpec(3, (nb_coef+2)//2, height_ratios=[2, 2, 1])
     for k in range(nb_coef+1):
         n = comp[-k]
@@ -99,6 +103,7 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
         suptitle = "Composantes principales dans la base de Haar"
     fig.suptitle(suptitle)
 
+    #affichage de chaque coefficient dans la base
     gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
     gs = gs[-1].subgridspec(1, 2)
     mk = '.' if G.N < 100 else 'None'
@@ -107,6 +112,7 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     for n in range(G.N):
         ax.plot([n+1, n+1], [0, sh[n]], color='C0')
     ax.set_title("Coefficients dans la décomposition")
+    #SNR en prenant uniquement les n composantes les plus importantes
     ax = fig.add_subplot(gs[-1])
     snr_vect = compressed_snr(G, B, s)
     ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker=mk)
