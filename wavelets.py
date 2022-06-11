@@ -24,13 +24,13 @@ g = np.vectorize(lambda x: g0(x)/1.384)
 
 def h(x):
     #passe-bas
-    return 1.3 * np.exp(-(2/3*x)**4)
+    return np.exp(-(2/3*x)**4)
 
 ## Génération des filtres (Mexican Hat)
 
 wavelet_type = "Mexican Hat"
 g = lambda x: x * np.exp(1-x)
-h = lambda x: 1.3 * np.exp(-x**4)
+h = lambda x: np.exp(-x**4)
 
 ## Calculs sur la famille d'ondelettes
 
@@ -91,27 +91,30 @@ def show_impulse_basis(G, B, node):
     for l in range(B.shape[0]//G.N):
         ax = axes[l//r][l%r]
         G.plot_signal(B[l*G.N + node], ax=ax, vertex_size=20)
-        ax.set_title("")
+        ax.set_title("$u_{{{}}}^{{{}}}$".format(node, l))
         ax.set_axis_off()
     fig.suptitle("Ondelettes " + wavelet_type + ", centrées en " + str(node))
 
 def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
-    mp_coef = decomp.shape[0]
+    mp_coef = len(decomp)
     fig = plt.figure(figsize=(4*((nb_coef+2)//2) ,8))
     #affichage du signal et de ses nb_coef composantes les plus
     #importantes
     gs = plt.GridSpec(3, (nb_coef+2)//2, height_ratios=[2, 2, 1])
-    for k in range(nb_coef+1):
+    ax = fig.add_subplot(gs[0])
+    G.plot_signal(s, ax=ax, vertex_size=20)
+    ax.set_title("Signal")
+    ax.set_axis_off()
+    for k in range(nb_coef):
         [n, c] = decomp[k]
         n = int(n)
-        ax = fig.add_subplot(gs[k])
-        s1 = s if k==0 else B[n]
-        G.plot_signal(s1, ax=ax, vertex_size=20)
-        title = "Signal" if k==0 else "$\\hat s_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
+        ax = fig.add_subplot(gs[k+1])
+        G.plot_signal(B[n], ax=ax, vertex_size=20)
+        title = "$\\hat s_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
         ax.set_title(title)
         ax.set_axis_off()
     if suptitle is None:
-        suptitle = "Reconstruction du signal avec {} vecteurs dans la base ".format(mp_coef) + wavelet_type
+        suptitle = "Reconstruction du signal (de dimension {}) avec {} vecteurs dans la base ".format(G.N, mp_coef) + wavelet_type
     fig.suptitle(suptitle)
 
     #affichage de chaque coefficient dans la base
@@ -133,7 +136,7 @@ def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
 
 l = np.linspace(0, 10, 501)
 lmax = 10
-r = 7
+r = 5
 
 total = np.array([h(40*x/lmax)**2 + np.sum([g(x/w0)**2 for w0 in frequencies(lmax, r)]) for x in l])
 
@@ -164,13 +167,40 @@ show_components(G, B, s, decomp, snr_vect)
 
 ## Exemple 2 : Signal lisse
 
-G = graphs.DavidSensorNet()
-s = np.array([np.sin(G.coords[i,0]) for i in range(G.N)])
+G = graphs.Logo()
+s = np.array([np.sin(0.01*G.coords[i,0]) for i in range(G.N)])
+s = s - np.average(s)
 B = impulse_basis(G, 5)
-C = coefficients(B, s)
+decomp, snr_vect = matching_pursuit(G, B, s, G.N//2)
 plt.close('all')
-show_components(G, B, C, s)
-#show_matching_pursuit(G, B, s, 3)
+show_components(G, B, s, decomp, snr_vect)
+
+## Exemple 3 : Bretagne
+
+H = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+temp = np.loadtxt("data/Temperature.txt")
+G = graphs.Graph(H)
+G.set_coordinates(coords)
+
+s = temp[0]
+B = impulse_basis(G, 5)
+decomp, snr_vect = matching_pursuit(G, B, s, G.N)
+plt.close('all')
+show_components(G, B, s, decomp, snr_vect)
+
+## Exemple 4 : Bruit
+
+H = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+G = graphs.Graph(H)
+G.set_coordinates(coords)
+
+s = np.random.normal(size=G.N)
+B = impulse_basis(G, 5)
+decomp, snr_vect = matching_pursuit(G, B, s, G.N)
+plt.close('all')
+show_components(G, B, s, decomp, snr_vect)
 
 ## Mesure de la redondance
 
@@ -185,35 +215,3 @@ for l in range(3):
 R = redundancy(B)
 plt.imshow(R.reshape(-1, G.N))
 plt.colorbar()
-
-##
-
-# def show_matching_pursuit(G, B, s, d, suptitle=""):
-#     Base, Coefs, Snr = matching_pursuit(G, B, s, d)
-#     fig = plt.figure(figsize=(10,8))
-#     gs = plt.GridSpec(2*(d//2 + 1), 2, height_ratios=[2-k%2 for k in range(2*(d//2 + 1))])
-#     ax = fig.add_subplot(gs[0])
-#     G.plot_signal(s, ax=ax, vertex_size=20)
-#     title = "Signal"
-#     ax.set_title(title)
-#     ax.set_axis_off()
-#     for k in range(1,d+1):
-#         ax = fig.add_subplot(gs[k + 2*(k//2)])
-#         G.plot_signal(Base[k-1], ax=ax, vertex_size=20)
-#         title = "Ondelette "
-#         ax.set_title(title)
-#         ax.set_axis_off()
-#
-#         s = (k%2 == 1)
-#         ax = fig.add_subplot(gs[k + 2*(k//2) + 2*s-1])
-#         im = ax.imshow(Coefs[k-1])
-#         fig.colorbar(im, ax=ax)
-#     fig.suptitle(suptitle)
-#     s = (d%2 == 0)
-#     ax = fig.add_subplot(gs[-1 -s])
-#     im = ax.imshow(Coefs[d])
-#     fig.colorbar(im, ax=ax)
-#
-#     print("On obtient un SNR de {n:.2f}".format(n=Snr))
-
-

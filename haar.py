@@ -166,3 +166,15 @@ s_hat = coefficients(B, s)
 plt.close('all')
 show_components(G, B, s, s_hat)
 
+## Exemple 4 : Bruit
+
+H = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+G = graphs.Graph(H)
+G.set_coordinates(coords)
+
+s = np.random.normal(size=G.N)
+B = haar_basis(G)
+s_hat = coefficients(B, s)
+plt.close('all')
+show_components(G, B, s, s_hat)
