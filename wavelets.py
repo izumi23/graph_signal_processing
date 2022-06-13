@@ -51,6 +51,7 @@ def impulse_basis(G, r):
             d[node] = 1
             d = pygsp.filters.Filter(G, f).filter(d)
             B[G.N*l + node] = d/np.sqrt(np.sum(d**2))
+    B[0,:] = 1/np.sqrt(G.N)
     return B
 
 def coefficients(B, s):
@@ -61,21 +62,51 @@ def snr(s, s_compr):
     #signal-to-noise ratio (logarithmic)
     return -10 * np.log10( 1e-14 + np.mean((s_compr-s)**2) / np.mean(s**2) )
 
-def matching_pursuit(G, B, s, nb_coef=None):
-    if nb_coef is None:
-        nb_coef = G.N
-    s_compr = np.zeros_like(s) #compressed
-    res = s.copy() #residue
-    decomp = np.zeros((nb_coef, 2))
+def matching_pursuit(B, s, nb_coef):
+    #expression de s avec nb_coef vecteurs de B
+    #renvoie également le SNR obtenu à chaque étape intermédiaire
+    res = s.copy() #résidu
+    compo = np.zeros((nb_coef), dtype=int) #index du vecteur de B
+    coef = np.zeros((nb_coef)) #coefficient associé à ce vecteur
     snr_vect = np.zeros((nb_coef))
     for k in range(nb_coef):
         c = coefficients(B, res)
         n = np.argmax(np.abs(c))
-        decomp[k] = [n, c[n]]
-        s_compr += c[n] * B[n]
+        compo[k], coef[k] = n, c[n]
         res -= c[n] * B[n]
-        snr_vect[k] = snr(s, s_compr)
-    return decomp, snr_vect
+        snr_vect[k] = snr(s, s-res)
+    return (compo, coef), snr_vect
+
+def ortho_matching_pursuit(B, s, nb_coef):
+    res = s.copy() #résidu
+    compo = np.zeros((nb_coef), dtype=int) #index du vecteur de B
+    coef = np.zeros((nb_coef)) #coefficient associé à ce vecteur
+    available = np.ones((len(B)), dtype=bool)
+    snr_vect = np.zeros((nb_coef))
+    A = np.zeros((0, 0))
+    b = np.zeros((0))
+    v = np.zeros((0))
+    for k in range(nb_coef):
+        n = np.argmax(np.abs(coefficients(B, res)) * available)
+        available[n] = False
+        compo[k] = n
+        if k > 0:
+            b = b.reshape((-1, 1))
+            beta = 1/(1 - v @ b)
+            A = np.vstack((
+              np.hstack((A + beta*np.outer(b, b), -beta*b)),
+              np.hstack((-beta*np.transpose(b), beta*np.ones((1,1))))
+            ))
+            v = np.array([B[n] @ B[compo[j]] for j in range(k)])
+            b = A @ v
+        gamma = B[n] - np.sum([b[j]*B[compo[j]] for j in range(k)], axis=0)
+        coef[k] = res @ B[n] / np.sum(gamma**2)
+        res -= coef[k] * B[n]
+        for j in range(k):
+            coef[j] -= coef[k]*b[j]
+            res += coef[k]*b[j] * B[compo[j]]
+        snr_vect[k] = snr(s, s-res)
+    return (compo, coef), snr_vect
 
 def redundancy(B):
     #redondance des éléments de la famille avec les autres,
@@ -96,7 +127,7 @@ def show_impulse_basis(G, B, node):
     fig.suptitle("Ondelettes " + wavelet_type + ", centrées en " + str(node))
 
 def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
-    mp_coef = len(decomp)
+    mp_coef = len(decomp[0])
     fig = plt.figure(figsize=(4*((nb_coef+2)//2) ,8))
     #affichage du signal et de ses nb_coef composantes les plus
     #importantes
@@ -106,8 +137,7 @@ def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
     ax.set_title("Signal")
     ax.set_axis_off()
     for k in range(nb_coef):
-        [n, c] = decomp[k]
-        n = int(n)
+        n, c = decomp[0][k], decomp[1][k]
         ax = fig.add_subplot(gs[k+1])
         G.plot_signal(B[n], ax=ax, vertex_size=20)
         title = "$\\hat s_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
@@ -122,8 +152,9 @@ def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
     gs = gs[-1].subgridspec(1, 2)
     mk = '.' if G.N < 100 else 'None'
     ax = fig.add_subplot(gs[-2])
-    ax.plot(decomp[:,0], np.abs(decomp[:,1]), linestyle='None', marker=mk)
-    for [n, c] in decomp:
+    ax.plot(decomp[0], np.abs(decomp[1]), linestyle='None', marker='.')
+    for k in range(mp_coef):
+        n, c = decomp[0][k], decomp[1][k]
         ax.plot([n, n], [0, np.abs(c)], color='C0')
     ax.set_title("Coefficients dans la décomposition")
     #SNR en prenant uniquement les n composantes les plus importantes
@@ -161,7 +192,7 @@ G = graphs.DavidSensorNet()
 s = np.zeros((G.N))
 s[G.N//2] = 1
 B = impulse_basis(G, 5)
-decomp, snr_vect = matching_pursuit(G, B, s, G.N//2)
+decomp, snr_vect = ortho_matching_pursuit(B, s, G.N//2)
 plt.close('all')
 show_components(G, B, s, decomp, snr_vect)
 
@@ -171,7 +202,7 @@ G = graphs.Logo()
 s = np.array([np.sin(0.01*G.coords[i,0]) for i in range(G.N)])
 s = s - np.average(s)
 B = impulse_basis(G, 5)
-decomp, snr_vect = matching_pursuit(G, B, s, G.N//2)
+decomp, snr_vect = matching_pursuit(B, s, G.N//2)
 plt.close('all')
 show_components(G, B, s, decomp, snr_vect)
 
@@ -185,7 +216,7 @@ G.set_coordinates(coords)
 
 s = temp[0]
 B = impulse_basis(G, 5)
-decomp, snr_vect = matching_pursuit(G, B, s, G.N)
+decomp, snr_vect = ortho_matching_pursuit(B, s, G.N)
 plt.close('all')
 show_components(G, B, s, decomp, snr_vect)
 
@@ -198,7 +229,7 @@ G.set_coordinates(coords)
 
 s = np.random.normal(size=G.N)
 B = impulse_basis(G, 5)
-decomp, snr_vect = matching_pursuit(G, B, s, G.N)
+decomp, snr_vect = ortho_matching_pursuit(B, s, G.N)
 plt.close('all')
 show_components(G, B, s, decomp, snr_vect)
 
@@ -208,10 +239,23 @@ plt.close('all')
 G = graphs.DavidSensorNet()
 B = impulse_basis(G, 5)
 for l in range(3):
-    for node in range(l%3, G.N, 3):
-        B[l*G.N + node] = 0
     for node in range((l+1)%3, G.N, 3):
+        B[l*G.N + node] = 0
+    for node in range((l+2)%3, G.N, 3):
         B[l*G.N, node] = 0
 R = redundancy(B)
 plt.imshow(R.reshape(-1, G.N))
 plt.colorbar()
+
+## Comparatif matching pursuit classique / orthogonal
+
+G = graphs.DavidSensorNet()
+s = np.zeros((G.N))
+s[G.N//2] = 1
+B = impulse_basis(G, 5)
+_, snr_vect = matching_pursuit(B, s, G.N//2)
+_, snr_vect2 = ortho_matching_pursuit(B, s, G.N//2)
+plt.close('all')
+plt.plot(snr_vect)
+plt.plot(snr_vect2)
+plt.ylim(-2, 40)
