@@ -58,31 +58,44 @@ def coefficients(B, s):
     #coefficients sur toute la famille d'ondelettes
     return B @ s
 
+def redundancy(B):
+    #redondance des éléments de la famille avec les autres,
+    #mesurée comme la somme des corrélations au carré
+    Corr2 = np.nan_to_num(np.corrcoef(B))**2
+    return np.sum(Corr2, axis=1) - 1
+
 def snr(s, s_compr):
     #signal-to-noise ratio (logarithmic)
     return -10 * np.log10( 1e-14 + np.mean((s_compr-s)**2) / np.mean(s**2) )
 
-def matching_pursuit(B, s, nb_coef):
+def matching_pursuit(B, s, nb_coef, s0=None):
     #expression de s avec nb_coef vecteurs de B
     #renvoie également le SNR obtenu à chaque étape intermédiaire
+    if s0 is None:
+        s0 = s #signal de référence
     res = s.copy() #résidu
-    compo = np.zeros((nb_coef), dtype=int) #index du vecteur de B
+    compo = np.zeros((nb_coef), dtype=int) #index du vecteur utilisé
     coef = np.zeros((nb_coef)) #coefficient associé à ce vecteur
-    snr_vect = np.zeros((nb_coef))
+    self_snr = np.zeros((nb_coef))
+    denoise_snr = np.zeros((nb_coef))
     for k in range(nb_coef):
         c = coefficients(B, res)
         n = np.argmax(np.abs(c))
         compo[k], coef[k] = n, c[n]
         res -= c[n] * B[n]
-        snr_vect[k] = snr(s, s-res)
-    return (compo, coef), snr_vect
+        self_snr[k] = snr(s, s-res)
+        denoise_snr[k] = snr(s0, s-res)
+    return (compo, coef), self_snr, denoise_snr
 
-def ortho_matching_pursuit(B, s, nb_coef):
+def ortho_matching_pursuit(B, s, nb_coef, s0=None):
+    if s0 is None:
+        s0 = s #signal de référence
     res = s.copy() #résidu
-    compo = np.zeros((nb_coef), dtype=int) #index du vecteur de B
-    coef = np.zeros((nb_coef)) #coefficient associé à ce vecteur
+    compo = np.zeros((nb_coef), dtype=int)
+    coef = np.zeros((nb_coef))
     available = np.ones((len(B)), dtype=bool)
-    snr_vect = np.zeros((nb_coef))
+    self_snr = np.zeros((nb_coef))
+    denoise_snr = np.zeros((nb_coef))
     A = np.zeros((0, 0))
     b = np.zeros((0))
     v = np.zeros((0))
@@ -90,6 +103,7 @@ def ortho_matching_pursuit(B, s, nb_coef):
         n = np.argmax(np.abs(coefficients(B, res)) * available)
         available[n] = False
         compo[k] = n
+        #projection orthogonale sur les vecteurs précédents
         if k > 0:
             b = b.reshape((-1, 1))
             beta = 1/(1 - v @ b)
@@ -102,17 +116,13 @@ def ortho_matching_pursuit(B, s, nb_coef):
         gamma = B[n] - np.sum([b[j]*B[compo[j]] for j in range(k)], axis=0)
         coef[k] = res @ B[n] / np.sum(gamma**2)
         res -= coef[k] * B[n]
+        #ajustement des coefficients précédents
         for j in range(k):
             coef[j] -= coef[k]*b[j]
             res += coef[k]*b[j] * B[compo[j]]
-        snr_vect[k] = snr(s, s-res)
-    return (compo, coef), snr_vect
-
-def redundancy(B):
-    #redondance des éléments de la famille avec les autres,
-    #mesurée comme la somme des corrélations au carré
-    Corr2 = np.nan_to_num(np.corrcoef(B))**2
-    return np.sum(Corr2, axis=1) - 1
+        self_snr[k] = snr(s, s-res)
+        denoise_snr[k] = snr(s0, s-res)
+    return (compo, coef), self_snr, denoise_snr
 
 ## Illustrations
 
@@ -126,19 +136,34 @@ def show_impulse_basis(G, B, node):
         ax.set_axis_off()
     fig.suptitle("Ondelettes " + wavelet_type + ", centrées sur le sommet " + str(node))
 
-def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
+def show_components(G, B, s, decomp, self_snr, denoise_snr, nb_coef=3, s0=None, suptitle=None):
+    d = int(s0 is not None)
     mp_coef = len(decomp[0])
-    fig = plt.figure(figsize=(4*((nb_coef+2)//2) ,8))
+    fig = plt.figure(figsize=(4*((nb_coef+2+2*d)//2) ,8))
     #affichage du signal et de ses nb_coef composantes les plus
     #importantes
-    gs = plt.GridSpec(3, (nb_coef+2)//2, height_ratios=[2, 2, 1])
-    ax = fig.add_subplot(gs[0])
+    gs = plt.GridSpec(3, (nb_coef+2+2*d)//2, height_ratios=[2, 2, 1])
+    ax = fig.add_subplot(gs[d])
     G.plot_signal(s, ax=ax, vertex_size=20)
-    ax.set_title("Signal")
     ax.set_axis_off()
+    if s0 is None:
+        ax.set_title("Signal")
+    else:
+        ax.set_title("Signal bruité : SNR = {:.1f}".format(snr(s0, s)))
+        ax = fig.add_subplot(gs[0])
+        G.plot_signal(s0, ax=ax, vertex_size=20)
+        ax.set_title("Signal d'origine")
+        ax.set_axis_off()
+        ax = fig.add_subplot(gs[2])
+        k = np.argmax(denoise_snr)
+        compo, coef = decomp
+        s2 = np.sum(np.array([cf*B[cm] for cf, cm in zip(coef[:k], compo[:k])]), axis=0)
+        G.plot_signal(s2, ax=ax, vertex_size=20)
+        ax.set_title("Signal filtré : SNR = {:.1f}".format(snr(s0, s2)))
+        ax.set_axis_off()
     for k in range(nb_coef):
         n, c = decomp[0][k], decomp[1][k]
-        ax = fig.add_subplot(gs[k+1])
+        ax = fig.add_subplot(gs[k+2*d+1])
         G.plot_signal(B[n], ax=ax, vertex_size=20)
         title = "$\\hat s_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
         ax.set_title(title)
@@ -159,7 +184,10 @@ def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
     ax.set_title("Coefficients dans la décomposition")
     #SNR en prenant uniquement les n composantes les plus importantes
     ax = fig.add_subplot(gs[-1])
-    ax.plot(np.arange(1, mp_coef+1), snr_vect, marker=mk)
+    ax.plot(np.arange(1, mp_coef+1), self_snr, marker=mk, label="En référence au signal bruité")
+    if s0 is not None:
+        ax.plot(np.arange(1, mp_coef+1), denoise_snr, marker=mk, label="En référence au signal d'origine")
+        ax.legend()
     ax.set_ylim(-2, 40)
     ax.set_title("SNR vs nombre de composantes utilisées")
 
@@ -189,22 +217,24 @@ show_impulse_basis(G, B, 10)
 ## Exemple 1 : Dirac
 
 G = graphs.DavidSensorNet()
-s = np.zeros((G.N))
-s[G.N//2] = 1
+s0 = np.zeros((G.N))
+s0[G.N//2] = 1
+s = s0 + np.random.normal(0, 0.1, size=G.N)
 B = impulse_basis(G, 5)
-decomp, snr_vect = ortho_matching_pursuit(B, s, G.N//2)
+decomp, snr_vect = ortho_matching_pursuit(B, s, G.N, s0=s0)
 plt.close('all')
-show_components(G, B, s, decomp, snr_vect)
+show_components(G, B, s, decomp, snr_vect, s0=s0)
 
 ## Exemple 2 : Signal lisse
 
 G = graphs.Logo()
-s = np.array([np.sin(0.01*G.coords[i,0]) for i in range(G.N)])
-s = s - np.average(s)
 B = impulse_basis(G, 5)
-decomp, snr_vect = matching_pursuit(B, s, G.N//2)
+s0 = np.array([np.sin(0.01*G.coords[i,0]) for i in range(G.N)])
+s0 = s0 - np.average(s0)
+s = s0 + np.random.normal(0, 0.3, size=G.N)
+decomp, self_snr, denoise_snr = matching_pursuit(B, s, G.N//2, s0=s0)
 plt.close('all')
-show_components(G, B, s, decomp, snr_vect)
+show_components(G, B, s, decomp, self_snr, denoise_snr, s0=s0)
 
 ## Exemple 3 : Bretagne
 
@@ -213,12 +243,13 @@ coords = np.loadtxt("data/GraphCoords.txt")
 temp = np.loadtxt("data/Temperature.txt")
 G = graphs.Graph(H)
 G.set_coordinates(coords)
-
-s = temp[0]
 B = impulse_basis(G, 5)
-decomp, snr_vect = ortho_matching_pursuit(B, s, G.N)
+
+s0 = temp[0] - np.average(temp[0])
+s = s0 + np.random.normal(0, 0.3, size=G.N)
+decomp, self_snr, denoise_snr = matching_pursuit(B, s, G.N//2, s0=s0)
 plt.close('all')
-show_components(G, B, s, decomp, snr_vect)
+show_components(G, B, s, decomp, self_snr, denoise_snr, s0=s0)
 
 ## Exemple 4 : Bruit
 
@@ -226,12 +257,12 @@ H = np.loadtxt("data/GraphBretagneHybr.txt")
 coords = np.loadtxt("data/GraphCoords.txt")
 G = graphs.Graph(H)
 G.set_coordinates(coords)
+B = impulse_basis(G, 5)
 
 s = np.random.normal(size=G.N)
-B = impulse_basis(G, 5)
-decomp, snr_vect = ortho_matching_pursuit(B, s, G.N)
+decomp, snr_vect, d = ortho_matching_pursuit(B, s, G.N)
 plt.close('all')
-show_components(G, B, s, decomp, snr_vect)
+show_components(G, B, s, decomp, snr_vect, d, nb_coef=5)
 
 ## Mesure de la redondance
 
