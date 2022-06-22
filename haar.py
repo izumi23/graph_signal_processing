@@ -84,6 +84,21 @@ def show_haar_basis(G, B):
     im = ax.imshow(B)
     fig.colorbar(im, ax=ax, aspect=40)
 
+def show_haar_basis2(G, B):
+    fig, axes = plt.subplots(2, 3, figsize=((12,6)))
+    axes = axes.flatten()
+    ax = axes[0]
+    G.compute_fourier_basis()
+    G.plot_signal(G.U[:,1], vertex_size=30, ax=ax)
+    ax.set_title("Deuxième vecteur propre")
+    ax.set_axis_off()
+    for i in range(1, 6):
+        ax = axes[i]
+        n = i if i < 4 else G.N-6+i
+        G.plot_signal(B[n], vertex_size=30, ax=ax)
+        ax.set_title('$u_{{{}}}$'.format(n+1))
+        ax.set_axis_off()
+
 def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
     sh = np.abs(s_hat)
     comp = np.argsort(sh)
@@ -122,7 +137,7 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
 ## Visualiser la base classique de Haar (ordonnée)
 
 plt.close('all')
-plt.imshow(haar_basis_ordered(21))
+plt.imshow(haar_basis_ordered(21).transpose())
 plt.colorbar()
 
 ## Visualiser la base de Haar d'un graphe
@@ -130,7 +145,7 @@ plt.colorbar()
 plt.close('all')
 G = graphs.DavidSensorNet()
 B = haar_basis(G)
-show_haar_basis(G, B)
+show_haar_basis2(G, B)
 
 ## Exemple 1 : Dirac
 

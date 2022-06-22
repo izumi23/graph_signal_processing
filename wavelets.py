@@ -124,7 +124,7 @@ def show_impulse_basis(G, B, node):
         G.plot_signal(B[l*G.N + node], ax=ax, vertex_size=20)
         ax.set_title("$u_{{{}}}^{{{}}}$".format(node, l))
         ax.set_axis_off()
-    fig.suptitle("Ondelettes " + wavelet_type + ", centrées en " + str(node))
+    fig.suptitle("Ondelettes " + wavelet_type + ", centrées sur le sommet " + str(node))
 
 def show_components(G, B, s, decomp, snr_vect, nb_coef=5, suptitle=None):
     mp_coef = len(decomp[0])
@@ -175,8 +175,8 @@ plt.close('all')
 fig, ax = plt.subplots()
 ax.plot(l, np.array([h(40*x/lmax) for x in l]), label="passe-bas")
 for w0 in frequencies(lmax, r):
-    ax.plot(l, np.array([g(x/w0) for x in l]), label="{:.2f}".format(w0))
-ax.plot(l, total, label="total des carrés")
+    ax.plot(l, np.array([g(x/w0) for x in l]), label="$w_c = {{{:.2f}}}$".format(w0))
+#ax.plot(l, total, label="total des carrés")
 ax.legend()
 
 ## Visualiser un extrait de la base impulsionnelle
@@ -184,7 +184,7 @@ ax.legend()
 plt.close('all')
 G = graphs.DavidSensorNet()
 B = impulse_basis(G, 5)
-show_impulse_basis(G, B, G.N//2)
+show_impulse_basis(G, B, 10)
 
 ## Exemple 1 : Dirac
 

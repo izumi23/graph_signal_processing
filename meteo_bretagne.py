@@ -130,8 +130,12 @@ W = squareform(
 )
 crs = stations_gdf.crs.to_string()
 
+temp = temperature_array.copy()
+for i in range(len(temp)):
+    temp[i] -= np.average(temp[i])
+
 C = np.corrcoef(temperature_array, rowvar=False) - np.eye(len(W))
-t = 0.92
+t = 0.8
 Wc = C * (C >= t)
 
 H = np.zeros_like(W)
@@ -147,7 +151,7 @@ np.savetxt("data/GraphBretagneNN.txt", W, fmt='%.6f')
 np.savetxt("data/GraphCoords.txt", stations_np, fmt='%.6f')
 np.savetxt("data/Temperature.txt", temperature_array, fmt='%.1f')
 open("data/Map.txt", 'w').write(crs)
-np.savetxt("data/GraphBretagneCorr.txt", C, fmt='%.6f')
+np.savetxt("data/GraphBretagneCorr.txt", Wc, fmt='%.6f')
 np.savetxt("data/GraphBretagneHybr.txt", H, fmt='%.6f')
 
 
