@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pygsp
 from pygsp import graphs, filters, plotting
 
-from test_signal_decomposition import smoothness_and_gft, show_fourier_decomposition, compare_fourier_decomposition
+from filter_visualisation import show_filter_results
 
 ##
 
@@ -30,9 +30,10 @@ def low_pass_filter(G, s, s1, wc=None, wmax=None, order=1):
         wc = G.lmax/2
     p = polyfilter(wc, order, wmax)
     s2 = apply_polyfilter(G, s1, p)
-    suptitle = "SNR = {:.1f} --> {:.1f} dB".format(snr(s1, s), snr(s2, s))
+    snr_vect = [snr(s1, s), snr(s2, s)]
     h = lambda w: np.polyval(p, w)
-    compare_fourier_decomposition([G, G, G], [s, s1, s2], suptitle=suptitle, h=h)
+    G.compute_fourier_basis()
+    show_filter_results(G, G.e, [s, s1, s2], [G.gft(s), G.gft(s1), G.gft(s2)], h, snr_vect, suptitle="Filtre polynomial")
 
 
 ## On vérifie que le polynôme est bon
@@ -55,13 +56,12 @@ low_pass_filter(G, s, s1, wc=4.4, wmax=14, order=15)
 
 H = np.loadtxt("data/GraphBretagneHybr.txt")
 coords = np.loadtxt("data/GraphCoords.txt")
-s = np.loadtxt("data/Temperature.txt")
-
+temp = np.loadtxt("data/Temperature.txt")
 G = graphs.Graph(H)
 G.set_coordinates(coords)
 
-k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
-
-s1 = s[k] + np.random.normal(0, 3, size=G.N)
-low_pass_filter(G, s[k], s1, wc=2, wmax=8.5, order=15)
+plt.close('all')
+s = temp[0] - np.average(temp[0])
+s1 = s + np.random.normal(0, 3, size=G.N)
+low_pass_filter(G, s, s1, wc=2, wmax=8.5, order=15)
 

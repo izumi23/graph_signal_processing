@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 import pygsp
 from pygsp import graphs, filters, plotting
 
-from test_signal_decomposition import smoothness_and_gft, show_fourier_decomposition, compare_fourier_decomposition
+#from test_signal_decomposition import smoothness_and_gft, show_fourier_decomposition, compare_fourier_decomposition
+
 from prony2 import prony
+from filter_visualisation import show_filter_results
 
 ##
 
@@ -34,9 +36,10 @@ def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4, sep=1):
         wc = G.lmax/2
     p, q = ratfilter(wc, P, Q, sep=sep, wmax=wmax)
     s2 = apply_ratfilter(p, q, G.L, s1)
-    suptitle = "SNR = {:.1f} --> {:.1f} dB".format(snr(s1, s), snr(s2, s))
+    snr_vect = [snr(s1, s), snr(s2, s)]
     h = lambda w: np.polyval(q, w) / np.polyval(p, w)
-    compare_fourier_decomposition([G, G, G], [s, s1, s2], suptitle=suptitle, h=h)
+    G.compute_fourier_basis()
+    show_filter_results(G, G.e, [s, s1, s2], [G.gft(s), G.gft(s1), G.gft(s2)], h, snr_vect, suptitle="Filtre rationnel")
 
 
 ## On vérifie que le polynôme est bon
@@ -61,7 +64,8 @@ s = np.loadtxt("data/Temperature.txt")
 G = graphs.Graph(H)
 G.set_coordinates(coords)
 
-k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+#k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
+k = 0
 
 s1 = s[k] + np.random.normal(0, 3, size=G.N)
 low_pass_filter(G, s[k], s1, wc=2, wmax=8.5)
