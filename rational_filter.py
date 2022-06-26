@@ -59,14 +59,14 @@ low_pass_filter(G, s, s1, wc=4.35, wmax=14, sep=0.5)
 
 H = np.loadtxt("data/GraphBretagneHybr.txt")
 coords = np.loadtxt("data/GraphCoords.txt")
-s = np.loadtxt("data/Temperature.txt")
+temp = np.loadtxt("data/TemperatureGenerated.txt")
 
 G = graphs.Graph(H)
 G.set_coordinates(coords)
 
 #k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
-k = 0
-
-s1 = s[k] + np.random.normal(0, 3, size=G.N)
-low_pass_filter(G, s[k], s1, wc=2, wmax=8.5)
+plt.close('all')
+s = temp[1]
+s1 = s + np.random.normal(0, 30, size=G.N)
+low_pass_filter(G, s, s1, wc=2, wmax=8.5)
 
