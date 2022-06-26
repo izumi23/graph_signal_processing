@@ -9,7 +9,7 @@ from filter_visualisation import show_filter_results
 
 ## Filtres
 
-def snr(s2, s):
+def snr(s, s2):
     return -10 * np.log10( np.mean((s2-s)**2) / np.mean(s**2) )
 
 def low_pass_filter(G, s, s1, wc=None, order=1):
@@ -30,7 +30,7 @@ def high_pass_filter(G, s, s1, wc=None, order=1):
     h = np.vectorize(lambda w: float(w > wc))
     f = filters.Filter(G, h)
     s2 = f.filter(s1)
-    snr_vect = [snr(s1, s), snr(s2, s)]
+    snr_vect = [snr(s, s1), snr(s, s2)]
     show_filter_results(G, G.e, [s, s1, s2], [G.gft(s), G.gft(s1), G.gft(s2)], h, snr_vect, suptitle="Filtre idéal")
 
 

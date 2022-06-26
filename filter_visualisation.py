@@ -18,7 +18,7 @@ def show_filter_results(G, spectrum, s, s_hat, h, snr, discrete=False, suptitle=
     ]
     for u in range(3):
         ax1 = fig.add_subplot(gs[2*u])
-        G.plot_signal(s[u], ax=ax1, vertex_size=15, plot_name='')
+        G.plot_signal(s[u], ax=ax1, vertex_size=25, plot_name='')
         ax1.set_axis_off()
 
         ax2 = fig.add_subplot(gs[2*u+1])

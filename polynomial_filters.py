@@ -21,7 +21,7 @@ def apply_polyfilter(G, s, p):
         H = G.L @ H + pv*np.eye(G.N)
     return H @ s
 
-def snr(s2, s):
+def snr(s, s2):
     return -10 * np.log10( np.mean((s2-s)**2) / np.mean(s**2) )
 
 def low_pass_filter(G, s, s1, wc=None, wmax=None, order=1):
@@ -30,7 +30,7 @@ def low_pass_filter(G, s, s1, wc=None, wmax=None, order=1):
         wc = G.lmax/2
     p = polyfilter(wc, order, wmax)
     s2 = apply_polyfilter(G, s1, p)
-    snr_vect = [snr(s1, s), snr(s2, s)]
+    snr_vect = [snr(s, s1), snr(s, s2)]
     h = lambda w: np.polyval(p, w)
     G.compute_fourier_basis()
     show_filter_results(G, G.e, [s, s1, s2], [G.gft(s), G.gft(s1), G.gft(s2)], h, snr_vect, suptitle="Filtre polynomial")

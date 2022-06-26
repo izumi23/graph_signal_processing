@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pygsp
 from pygsp import graphs, filters, plotting
 
+from filter_visualisation import show_filter_results
+
 plt.ion()
 plt.show()
 plt.rcParams['figure.autolayout'] = True
@@ -65,6 +67,32 @@ def compressed_snr(G, B, s):
         snr_vect[k] = snr(s, s_compr)
     return snr_vect
 
+## Filtrage
+
+def haar_filter(N, h):
+    #la réponse du filtre dépend (uniquement) de la profondeur
+    #dans la dichotomie
+    N2 = 2 ** int(np.ceil(np.log2(N)))
+    H = [0. for i in range(N2)]
+    H[0] = h(0)
+    def dicho(a, b, i, depth):
+        if b-a >= 2:
+            c = (a+b)//2
+            H[i] = h(depth)
+            dicho(a, c, 2*i, depth+1)
+            dicho(c, b, 2*i+1, depth+1)
+    dicho(0, N, 1, 1)
+    i = 1
+    while i < len(H):
+        if H[i] <= 1e-14:
+            H.pop(i)
+        else:
+            i += 1
+    return np.array(H)
+
+def apply_haar_filter(B, H, s):
+    return B @ (H * (B.transpose() @ s))
+
 ## Illustration
 
 def show_haar_basis(G, B):
@@ -120,19 +148,27 @@ def show_components(G, B, s, s_hat, nb_coef=5, suptitle=None):
 
     #affichage de chaque coefficient dans la base
     gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
-    gs = gs[-1].subgridspec(1, 2)
+    #gs = gs[-1].subgridspec(1, 2)
+    #ax = fig.add_subplot(gs[-2])
+    ax = fig.add_subplot(gs[-1])
     mk = '.' if G.N < 100 else 'None'
-    ax = fig.add_subplot(gs[-2])
     ax.plot(np.arange(1, G.N+1), sh, linestyle='None', marker=mk)
     for n in range(G.N):
         ax.plot([n+1, n+1], [0, sh[n]], color='C0')
     ax.set_title("Coefficients dans la décomposition")
-    #SNR en prenant uniquement les n composantes les plus importantes
-    ax = fig.add_subplot(gs[-1])
-    snr_vect = compressed_snr(G, B, s)
-    ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker=mk)
-    ax.set_ylim(-2, 40)
-    ax.set_title("SNR vs nombre de composantes gardées")
+
+    if False:
+        #SNR en prenant uniquement les n composantes les plus importantes
+        ax = fig.add_subplot(gs[-1])
+        snr_vect = compressed_snr(G, B, s)
+        ax.plot(np.arange(1, G.N), np.flip(snr_vect), marker=mk)
+        ax.set_ylim(-2, 40)
+        ax.set_title("SNR vs nombre de composantes gardées")
+
+def show_haar_filtering(G, B, H, s, s1):
+    s2 = apply_haar_filter(B, H, s1)
+    val = [B.transpose() @ ss for ss in [s, s1, s2]]
+    show_filter_results(G, np.arange(1, G.N+1), [s, s1, s2], val, lambda w: H[w-1], [snr(s, s1), snr(s, s2)], discrete=True, suptitle="Filtre de Haar")
 
 ## Visualiser la base classique de Haar (ordonnée)
 
@@ -156,6 +192,20 @@ B = haar_basis(G)
 s_hat = coefficients(B, s)
 plt.close('all')
 show_components(G, B, s, s_hat)
+
+## Filtrage
+
+W = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+temp = np.loadtxt("data/Temperature.txt")
+G = graphs.Graph(W)
+G.set_coordinates(coords)
+B = haar_basis(G)
+H = haar_filter(G.N, lambda w: 1/(1+w))
+s = temp[0] - np.average(temp[0])
+s1 = s + np.random.normal(0, 0.5, size=G.N)
+plt.close('all')
+show_haar_filtering(G, B, H, s, s1)
 
 ## Exemple 2 : Signal lisse
 

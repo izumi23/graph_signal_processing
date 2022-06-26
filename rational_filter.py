@@ -27,7 +27,7 @@ def polyval(p, L):
 def apply_ratfilter(p, q, L, s):
     return np.linalg.solve(polyval(p, L), polyval(q, L) @ s)
 
-def snr(s2, s):
+def snr(s, s2):
     return -10 * np.log10( np.mean((s2-s)**2) / np.mean(s**2) )
 
 def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4, sep=1):
@@ -36,7 +36,7 @@ def low_pass_filter(G, s, s1, wc=None, wmax=None, P=6, Q=4, sep=1):
         wc = G.lmax/2
     p, q = ratfilter(wc, P, Q, sep=sep, wmax=wmax)
     s2 = apply_ratfilter(p, q, G.L, s1)
-    snr_vect = [snr(s1, s), snr(s2, s)]
+    snr_vect = [snr(s, s1), snr(s, s2)]
     h = lambda w: np.polyval(q, w) / np.polyval(p, w)
     G.compute_fourier_basis()
     show_filter_results(G, G.e, [s, s1, s2], [G.gft(s), G.gft(s1), G.gft(s2)], h, snr_vect, suptitle="Filtre rationnel")
