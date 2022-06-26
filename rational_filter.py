@@ -66,7 +66,7 @@ G.set_coordinates(coords)
 
 #k = np.argmin([smoothness_and_gft(G, s[i])[0] for i in range(len(s))])
 plt.close('all')
-s = temp[1]
-s1 = s + np.random.normal(0, 30, size=G.N)
-low_pass_filter(G, s, s1, wc=2, wmax=8.5)
+s = temp[0]
+s1 = s + np.random.normal(0, 0.6, size=G.N)
+low_pass_filter(G, s, s1, wc=4, wmax=8.5)
 
