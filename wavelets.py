@@ -165,7 +165,7 @@ def show_components(G, B, s, decomp, self_snr, denoise_snr, nb_coef=3, s0=None, 
         n, c = decomp[0][k], decomp[1][k]
         ax = fig.add_subplot(gs[k+2*d+1])
         G.plot_signal(B[n], ax=ax, vertex_size=20)
-        title = "$\\hat s_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
+        title = "$\\hat {{s}}_{{{}}}^{{{}}} = {:.3f}$".format(n%G.N, n//G.N, c)
         ax.set_title(title)
         ax.set_axis_off()
     if suptitle is None:
@@ -174,22 +174,23 @@ def show_components(G, B, s, decomp, self_snr, denoise_snr, nb_coef=3, s0=None, 
 
     #affichage de chaque coefficient dans la base
     gs = plt.GridSpec(3, 1, height_ratios=[2, 2, 1])
-    gs = gs[-1].subgridspec(1, 2)
+    #gs = gs[-1].subgridspec(1, 2)
     mk = '.' if G.N < 100 else 'None'
-    ax = fig.add_subplot(gs[-2])
+    #ax = fig.add_subplot(gs[-2])
+    ax = fig.add_subplot(gs[-1])
     ax.plot(decomp[0], np.abs(decomp[1]), linestyle='None', marker='.')
     for k in range(mp_coef):
         n, c = decomp[0][k], decomp[1][k]
         ax.plot([n, n], [0, np.abs(c)], color='C0')
     ax.set_title("Coefficients dans la décomposition")
-    #SNR en prenant uniquement les n composantes les plus importantes
-    ax = fig.add_subplot(gs[-1])
-    ax.plot(np.arange(1, mp_coef+1), self_snr, marker=mk, label="En référence au signal bruité")
-    if s0 is not None:
-        ax.plot(np.arange(1, mp_coef+1), denoise_snr, marker=mk, label="En référence au signal d'origine")
-        ax.legend()
-    ax.set_ylim(-2, 40)
-    ax.set_title("SNR vs nombre de composantes utilisées")
+    ##SNR en prenant uniquement les n composantes les plus importantes
+    #ax = fig.add_subplot(gs[-1])
+    #ax.plot(np.arange(1, mp_coef+1), self_snr, marker=mk, label="En référence au signal bruité")
+    #if s0 is not None:
+    #    ax.plot(np.arange(1, mp_coef+1), denoise_snr, marker=mk, label="En référence au signal d'origine")
+    #    ax.legend()
+    #ax.set_ylim(-2, 40)
+    #ax.set_title("SNR vs nombre de composantes utilisées")
 
 ## Visualiser l'ensemble de filtres
 
@@ -290,3 +291,17 @@ plt.close('all')
 plt.plot(snr_vect)
 plt.plot(snr_vect2)
 plt.ylim(-2, 40)
+
+## 
+
+H = np.loadtxt("data/GraphBretagneHybr.txt")
+coords = np.loadtxt("data/GraphCoords.txt")
+temp = np.loadtxt("data/TemperatureGenerated.txt")
+G = graphs.Graph(H)
+G.set_coordinates(coords)
+B = impulse_basis(G, 5)
+
+nb_coef = 24
+s = temp[0] - np.average(temp[0])
+decomp, self_snr, denoise_snr = ortho_matching_pursuit(B, s, nb_coef, s0=None)
+show_components(G, B, s, decomp, self_snr, denoise_snr, nb_coef=3, s0=None, suptitle=None)
